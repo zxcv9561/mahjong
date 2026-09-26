@@ -231,14 +231,14 @@ function renderSetup() {
     <div><div class="fg"><label>인원</label><div class="seg">${[4, 3].map(n => `<button class="${c.n === n ? 'on' : ''}" data-cfg="n" data-v="${n}">${n}인${n === 3 ? ' (산마)' : ''}</button>`).join('')}</div></div>
     <div class="fg"><label>길이</label><div class="seg">${[['han', '반장전 (동·남)'], ['ton', '동풍전 (동)']].map(([k, n]) => `<button class="${c.len === k ? 'on' : ''}" data-cfg="len" data-v="${k}">${n}</button>`).join('')}</div></div>
     <div class="fg"><label>적도라 (빨간 5)</label><div class="seg">${[[true, '있음'], [false, '없음']].map(([k, n]) => `<button class="${c.aka === k ? 'on' : ''}" data-cfg="aka" data-v="${k}">${n}</button>`).join('')}</div></div>
-    <div class="fg"><label>자리</label><div class="seat"><b>${winds[0]}</b><span style="display:flex;align-items:center;gap:8px;font-weight:800">${avHTML(CH[PF.d.char], PF.img(PF.d.char, 'face'), 28)}${esc(PF.d.nick)}</span><span style="font-size:13px;color:var(--mut)">나 (이 기기)</span></div>
+    <div class="fg"><label>자리</label><div class="seat"><b>${winds[0]}</b><span style="display:flex;align-items:center;gap:8px;font-weight:800">${avHTML(CH.me, PF.img('me', 'face'), 28)}${esc(PF.d.nick)}</span><span style="font-size:13px;color:var(--mut)">나 (이 기기)</span></div>
       ${c.seats.slice(0, c.n - 1).map((v, i) => `<div class="seat"><b>${winds[i + 1]}</b><span style="font-size:13px">자리 ${i + 2}</span><select data-seat="${i}">${[['low', '봇 · 약함'], ['mid', '봇 · 보통'], ['high', '봇 · 강함'], ['remote', '온라인 참가자']].map(([k, n]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`).join('')}</div>
     <div class="fg"><label>도움 기능 · 켜고 끄기</label><div style="display:flex;flex-wrap:wrap;gap:6px">${AS_INFO.map(([k, n]) => `<button class="pb ${AS[k] ? 'on' : ''}" data-as="${k}">${n}</button>`).join('')}</div></div>
     <div style="display:flex;gap:10px;margin-top:18px"><button class="go" data-a="start">대국 시작</button>${saved && !saved.over ? '<button class="go sec" data-a="resume">이어하기</button>' : ''}</div></div>`;
 }
 function startGame() {
-  const c = UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.filter(x => x.id !== PF.d.char));
-  const players = [{ name: nm, char: PF.d.char }].concat(c.seats.slice(0, c.n - 1).map((v, i) => v === 'remote' ? { name: `참가자 ${i + 1}`, remote: true, char: pool[i].id } : { name: `${pool[i].n} · 봇`, bot: true, level: v, char: pool[i].id }));
+  const c = UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.slice());
+  const players = [{ name: nm, char: 'me' }].concat(c.seats.slice(0, c.n - 1).map((v, i) => v === 'remote' ? { name: `참가자 ${i + 1}`, remote: true, char: pool[i].id } : { name: `${pool[i].n} · 봇`, bot: true, level: v, char: pool[i].id }));
   UI.skins = {};
   G = newGame({ n: c.n, len: c.len, aka: c.aka, players }); UI.modal = AS.tutor ? 'rules' : null;
   if (G.seats.some(S => S.remote) && window.CLOUD && CLOUD.user) { render(); return NET.create(); }
@@ -249,8 +249,8 @@ document.addEventListener('click', e => {
   const q = s => e.target.closest(s); let el;
   if ((el = q('[data-cfg]'))) { const k = el.dataset.cfg, v = el.dataset.v; UI.cfg[k] = k === 'n' ? +v : k === 'aka' ? v === 'true' : v; UI.cfg.name = ($('myname') || {}).value || UI.cfg.name; return renderSetup(); }
   if ((el = q('[data-as]'))) { AS[el.dataset.as] = !AS[el.dataset.as]; localStorage.setItem(AS_KEY, JSON.stringify(AS)); return G ? render() : renderSetup(); }
-  if ((el = q('[data-ch]'))) { PF.d.char = el.dataset.ch; PF.save(); return pfRefresh(); }
-  if ((el = q('[data-clr]'))) { PF.clearImg(PF.d.char, el.dataset.clr); return pfRefresh(); }
+  if ((el = q('[data-color]'))) { PF.d.color = el.dataset.color; PF.save(); return pfRefresh(); }
+  if ((el = q('[data-clr]'))) { PF.clearImg('me', el.dataset.clr); return pfRefresh(); }
   if ((el = q('[data-m]'))) { const m = el.dataset.m; if (m === 'room') return NET.create(); UI.modal = m; return renderModal(); }
   if ((el = q('[data-bot]'))) { if (isGuest()) return NET.toBot(+el.dataset.bot); const S = G.seats[+el.dataset.bot]; S.remote = false; S.bot = true; S.level = 'mid'; S.name = S.name.replace('참가자', '봇'); return after(); }
   if ((el = q('[data-d]'))) { const id = +el.dataset.d; if (!el.classList.contains('can')) return; const r = UI.riichi; UI.riichi = false; return doAct({ t: 'discard', id, riichi: r || undefined }); }
@@ -277,7 +277,7 @@ document.addEventListener('mouseover', e => { const tp = $('tip'); if (!tp) retu
 
 function pfRefresh() { renderModal(); if (!G) renderSetup(); else render(); }
 document.addEventListener('change', async e => { const el = e.target.closest && e.target.closest('[data-up]'); if (!el || !el.files[0]) return;
-  const r = await PF.setImg(PF.d.char, el.dataset.up, el.files[0]); if (r === 'full') toast('저장 공간이 부족합니다 · 다른 캐릭터 이미지를 지워 주세요'); else if (!r) toast('이미지를 읽지 못했습니다'); pfRefresh(); });
+  const r = await PF.setImg('me', el.dataset.up, el.files[0]); if (r === 'full') toast('저장 공간이 부족합니다 · 더 작은 이미지를 올려 주세요'); else if (!r) toast('이미지를 읽지 못했습니다'); pfRefresh(); });
 document.addEventListener('input', e => { if (e.target.id !== 'pfnick') return; PF.d.nick = e.target.value.trim().slice(0, 10) || '나'; PF.save(); if (!G) renderSetup(); });
 
 /* ── 컷인 (퐁 · 치 · 깡 · 리치 · 론 · 쯔모) ── */
@@ -298,7 +298,7 @@ function showCut(s, word, kind) {
 }
 /* ── 스탠딩 보이는 영역 편집 ── */
 let DRAG = null;
-const posOf = () => PF.standPos(PF.d.char);
+const posOf = () => PF.standPos('me');
 function applyPos() { const im = document.querySelector('.pfg>.stand img'); if (im) im.setAttribute('style', posStyle(posOf())); document.querySelectorAll('[data-pos]').forEach(el => { el.value = posOf()[el.dataset.pos]; }); }
 document.addEventListener('pointerdown', e => { const el = e.target.closest && e.target.closest('.pfg>.stand.img'); if (!el) return; e.preventDefault(); DRAG = { x: e.clientX, y: e.clientY, p: Object.assign({}, posOf()), w: el.getBoundingClientRect() }; });
 addEventListener('pointermove', e => { if (!DRAG) return; const p = posOf(), k = 100 / DRAG.p.z;
@@ -306,7 +306,7 @@ addEventListener('pointermove', e => { if (!DRAG) return; const p = posOf(), k =
 addEventListener('pointerup', () => { if (DRAG) { DRAG = null; PF.save(); } });
 document.addEventListener('wheel', e => { const el = e.target.closest && e.target.closest('.pfg>.stand.img'); if (!el) return; e.preventDefault(); const p = posOf(); p.z = Math.max(1, Math.min(3, +(p.z - e.deltaY * 0.0015).toFixed(2))); applyPos(); PF.save(); }, { passive: false });
 document.addEventListener('input', e => { const el = e.target.closest && e.target.closest('[data-pos]'); if (!el) return; posOf()[el.dataset.pos] = +el.value; applyPos(); PF.save(); });
-document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-posreset]')) { PF.d.standPos[PF.d.char] = { x: 50, y: 0, z: 1 }; PF.save(); applyPos(); } });
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-posreset]')) { PF.d.standPos.me = { x: 50, y: 0, z: 1 }; PF.save(); applyPos(); } });
 
 /* ── 텐파이 대기패 ── */
 let HOV = null;

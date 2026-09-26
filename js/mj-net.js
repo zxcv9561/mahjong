@@ -36,12 +36,12 @@
   NET.create = async () => {
     if (!need() || !G) return; if (NET.role) return toast(`방 코드 ${NET.code}`);
     const players = G.seats.map(S => ({ name: S.name, char: S.char, bot: !!S.bot, level: S.level, remote: !!S.remote }));
-    const d = await call('create', { code: '', players, n: G.n, len: G.len, aka: G.aka, afk: UI.cfg.afk ?? 20, skin: mySkin(PF.d.char) });
+    const d = await call('create', { code: '', players, n: G.n, len: G.len, aka: G.aka, afk: UI.cfg.afk ?? 20, skin: mySkin() });
     if (d && d.G) toast(`방 코드 ${d.code} · 친구에게 알려주세요`);
   };
   NET.join = async (code, name) => {
     if (!need()) return; NET.leave(true); NET.code = code;
-    const d = await call('join', { code, name: !name || name === '참가자' ? PF.d.nick : name, char: PF.d.char, skin: mySkin(PF.d.char) });
+    const d = await call('join', { code, name: !name || name === '참가자' ? PF.d.nick : name, char: 'me', skin: mySkin() });
     if (d && d.G) toast('입장했습니다'); else NET.code = '';
   };
   NET.resume = async () => { const code = localStorage.getItem(LAST); if (!code || NET.role || !CLOUD.user) return; NET.code = code; const d = await call('tick', { code }); if (d && d.G && !d.G.over) toast(`온라인 방 ${code}에 다시 들어왔습니다`); else if (!d || !d.G) NET.code = ''; };

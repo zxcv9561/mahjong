@@ -34,11 +34,11 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     if (error) { await CLOUD.sb.auth.signOut(); return false; }
     CLOUD.user = user; localStorage.removeItem('mj-offline');
     const d = row.data && Object.keys(row.data).length ? row.data : null;
-    if (d) { PF.d = Object.assign({ nick: row.nick, char: row.char, standPos: {}, skinUrls: {} }, d); PF.d.stats = Object.assign(PF.blank(), PF.d.stats || {}); if (!CH[PF.d.char]) PF.d.char = 'haru'; }
+    if (d) { PF.d = Object.assign({ nick: row.nick, char: row.char, standPos: {}, skinUrls: {} }, d); PF.d.stats = Object.assign(PF.blank(), PF.d.stats || {}); PF.d.skinUrls = PF.d.skinUrls || {}; PF.migrateMe(); }
     else { PF.d.nick = PF.d.nick && PF.d.nick !== '나' ? PF.d.nick : row.nick; PF.d.skinUrls = PF.d.skinUrls || {}; await migrateImgs(); }
     PF.saveLocal(); await push(); refresh(); if (window.NET && NET.resume) NET.resume(); return true;
   }
-  async function migrateImgs() { for (const c of CHARS) for (const k of ['face', 'stand']) { const u = localStorage.getItem(LOCAL_IMG(c.id, k)); if (u) await upload(c.id, k, u); } }
+  async function migrateImgs() { for (const c of [{ id: 'me' }]) for (const k of ['face', 'stand']) { const u = localStorage.getItem(LOCAL_IMG(c.id, k)); if (u) await upload(c.id, k, u); } }
   async function upload(ch, kind, dataUrl) {
     const blob = await (await fetch(dataUrl)).blob(), ext = blob.type.split('/')[1] || 'webp', path = `${CLOUD.user.id}/${ch}-${kind}.${ext}`;
     const { error } = await CLOUD.sb.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: blob.type });
@@ -48,7 +48,7 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
   }
   async function push() {
     if (!CLOUD.user) return; clearTimeout(CLOUD.t);
-    const { error } = await CLOUD.sb.from('profiles').update({ nick: String(PF.d.nick || '나').slice(0, 10), char: PF.d.char, data: PF.d }).eq('id', CLOUD.user.id);
+    const { error } = await CLOUD.sb.from('profiles').update({ nick: String(PF.d.nick || '나').slice(0, 10), char: 'me', data: PF.d }).eq('id', CLOUD.user.id);
     if (error) console.warn('profile save', error.message);
   }
   function refresh() { if (typeof G !== 'undefined' && G) render(); else if (typeof renderSetup === 'function') renderSetup(); }

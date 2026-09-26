@@ -10,13 +10,21 @@ const CHARS = [
   { id: 'rin', n: '린', h: '凛', c: '#0F6E72', d: '혼일색 장인' },
   { id: 'dal', n: '달', h: '月', c: '#E0B028', fg: '#0A0A0C', d: '운에 맡기는 낙천가' }];
 const CH = Object.fromEntries(CHARS.map(c => [c.id, c]));
+/* 내 프로필: 캐릭터 고르기 없이 한 프로필(id "me"). 이미지가 없을 때는 닉네임 첫 글자 + 고른 색으로 표시 */
+const ME_COLORS = ['#2B2A27', '#C8252C', '#1F4E9A', '#0F6E72', '#6A3D9A', '#B5651D'];
+const meChar = (name, color) => ({ id: 'me', n: name || '나', h: String(name || '나').slice(0, 1), c: color || ME_COLORS[0], d: '내 프로필' });
+Object.defineProperty(CH, 'me', { get: () => meChar(PF.d.nick, PF.d.color), enumerable: false });
 const YAKU_ALL = ['리치', '더블 리치', '일발', '멘젠 쯔모', '핑후', '탕야오', '이페코', '역패', '자풍', '장풍', '해저로월', '하저로어', '영상개화', '창깡', '치또이츠', '삼색동순', '일기통관', '찬타', '또이또이', '산안커', '산깡쯔', '삼색동각', '혼노두', '소삼원', '혼일색', '준찬타', '량페코', '청일색',
   '국사무쌍', '스안커', '대삼원', '소사희', '자일색', '녹일색', '청노두', '스깡쯔', '구련보등', '천화', '지화', '대사희', '스안커 단기', '국사무쌍 13면', '순정 구련보등'];
 const YM_SET = new Set(YAKU_ALL.slice(28));
 const PF_KEY = 'mj-profile-v1';
 const PF = {
   blank: () => ({ games: 0, hands: 0, wins: 0, tsumo: 0, dealin: 0, riichi: 0, calls: 0, winPts: 0, maxPts: null, rank4: [0, 0, 0, 0], rank3: [0, 0, 0], yaku: {}, ym: [], best: null, recent: [], lastHand: '', lastGame: '' }),
-  load() { let d = null; try { d = JSON.parse(localStorage.getItem(PF_KEY) || 'null'); } catch (e) {} this.d = Object.assign({ nick: '나', char: 'haru', standPos: {} }, d || {}); this.d.stats = Object.assign(this.blank(), this.d.stats || {}); if (!CH[this.d.char]) this.d.char = 'haru'; },
+  load() { let d = null; try { d = JSON.parse(localStorage.getItem(PF_KEY) || 'null'); } catch (e) {} this.d = Object.assign({ nick: '나', char: 'haru', standPos: {} }, d || {}); this.d.stats = Object.assign(this.blank(), this.d.stats || {}); this.migrateMe(); },
+  migrateMe() {   // 예전 버전(캐릭터 8종)에서 쓰던 이미지 · 위치를 한 프로필로 옮김
+    const old = this.d.char; if (old && old !== 'me' && CH[old]) { ['face', 'stand'].forEach(k => { const v = localStorage.getItem(`mj-skin-${old}-${k}`); if (v && !localStorage.getItem(`mj-skin-me-${k}`)) { try { localStorage.setItem(`mj-skin-me-${k}`, v); } catch (e) {} } });
+      if (this.d.standPos[old] && !this.d.standPos.me) this.d.standPos.me = this.d.standPos[old]; if (this.d.skinUrls && this.d.skinUrls[old] && !this.d.skinUrls.me) this.d.skinUrls.me = this.d.skinUrls[old]; }
+    this.d.char = 'me'; },
   save() { try { localStorage.setItem(PF_KEY, JSON.stringify(this.d)); } catch (e) {} },
   standPos(ch) { return this.d.standPos[ch] || (this.d.standPos[ch] = { x: 50, y: 0, z: 1 }); },
   img(ch, kind) { return localStorage.getItem(`mj-skin-${ch}-${kind}`); },
@@ -65,28 +73,28 @@ function standHTML(ch, img, cls = '', pos) {
   return img ? `<div class="stand img ${cls}"><img src="${img}" alt="" draggable="false" style="${posStyle(pos)}"></div>`
     : `<div class="stand ph ${cls}" style="background-color:${ch.c};color:${ch.fg || '#fff'}"><b>${ch.h}</b><span>${ch.n}</span><em>스탠딩 이미지 없음</em></div>`;
 }
-const mySkin = id => ({ face: PF.img(id, 'face'), stand: PF.img(id, 'stand'), pos: PF.standPos(id) });
-function charOf(s) { return CH[G.seats[s].char] || CHARS[s % CHARS.length]; }
-function skinOf(s) { const mine = isGuest() ? s === NET.seat : s === me(); return mine ? mySkin(charOf(s).id) : (UI.skins || {})[s] || {}; }
+const mySkin = () => ({ face: PF.img('me', 'face'), stand: PF.img('me', 'stand'), pos: PF.standPos('me'), color: PF.d.color || null });
+function charOf(s) { const S = G.seats[s]; if (S.char === 'me') { const mine = isGuest() ? s === NET.seat : s === me(); return mine ? CH.me : meChar(S.name, ((UI.skins || {})[s] || {}).color); } return CH[S.char] || CHARS[s % CHARS.length]; }
+function skinOf(s) { const mine = isGuest() ? s === NET.seat : s === me(); return mine ? mySkin() : (UI.skins || {})[s] || {}; }
 const avatar = (s, px) => avHTML(charOf(s), skinOf(s).face, px);
-function allSkins() { const o = Object.assign({}, UI.skins); if (G) o[me()] = mySkin(charOf(me()).id); return o; }
+function allSkins() { const o = Object.assign({}, UI.skins); if (G) o[me()] = mySkin(); return o; }
 
 function pfCardHTML() {
   const s = PF.d.stats, ch = CH[PF.d.char], r = s.rank4.some(Boolean) ? s.rank4 : s.rank3;
-  return `<div class="pfc">${standHTML(ch, PF.img(ch.id, 'stand'), 'sm', PF.standPos(ch.id))}<div style="min-width:0"><div class="k">내 프로필 · ${ch.n}</div><div class="nk">${esc(PF.d.nick)}</div>
+  return `<div class="pfc">${standHTML(ch, PF.img(ch.id, 'stand'), 'sm', PF.standPos(ch.id))}<div style="min-width:0"><div class="k">내 프로필</div><div class="nk">${esc(PF.d.nick)}</div>
     <div class="ms"><div>대국<b>${s.games}</b></div><div>평균 순위<b>${avgRank(r)}</b></div><div>화료율<b>${pct(s.wins, s.hands)}</b></div><div>최고 화료<b>${s.best ? esc(s.best.short) : '–'}</b></div></div>
-    <div style="display:flex;gap:6px"><button class="pb" data-m="profile">캐릭터 · 프로필</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="yakubook">족보</button></div></div></div>`;
+    <div style="display:flex;gap:6px"><button class="pb" data-m="profile">프로필 · 스킨</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="yakubook">족보</button></div></div></div>`;
 }
-const pfTabs = on => `<div class="seg" style="width:280px;margin:10px 0 14px">${[['profile', '캐릭터 · 프로필'], ['stats', '전적']].map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
+const pfTabs = on => `<div class="seg" style="width:280px;margin:10px 0 14px">${[['profile', '프로필 · 스킨'], ['stats', '전적']].map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
 function profileHTML() {
   const ch = CH[PF.d.char], face = PF.img(ch.id, 'face'), st = PF.img(ch.id, 'stand');
   return `<div class="md pf"><div class="k">내 프로필</div>${pfTabs('profile')}<div class="pfg">${standHTML(ch, st, '', PF.standPos(ch.id))}<div style="min-width:0">
     <div class="fg"><label>닉네임</label><div style="display:flex;gap:10px;align-items:center">${avHTML(ch, face, 38)}<input id="pfnick" class="pfin" maxlength="10" value="${esc(PF.d.nick)}"></div></div>
-    <div class="fg"><label>캐릭터 · 대국 중 자리와 화료 화면에 나옵니다</label><div class="chs">${CHARS.map(c => `<button class="ch ${c.id === ch.id ? 'on' : ''}" data-ch="${c.id}">${avHTML(c, PF.img(c.id, 'face'), 52)}<span>${c.n}</span><small>${c.d}</small></button>`).join('')}</div></div>
-    <div class="fg"><label>${ch.n} 스킨 · 내 이미지로 바꾸기</label>
+    <div class="fg"><label>기본 색 · 이미지가 없을 때 자리와 화료 화면에 쓰입니다</label><div style="display:flex;gap:8px">${ME_COLORS.map(c => `<button class="pb" data-color="${c}" aria-label="${c}" style="width:34px;height:34px;padding:0;background:${c};border:${c === ch.c ? '3px solid var(--ink)' : '1px solid var(--line)'};outline:${c === ch.c ? '2px solid #fff' : 'none'};outline-offset:-5px"></button>`).join('')}</div></div>
+    <div class="fg"><label>스킨 · 내 이미지로 바꾸기</label>
       <div class="up"><b>프로필 사진</b><label class="pb">올리기<input type="file" accept="image/*" data-up="face"></label>${face ? '<button class="pb" data-clr="face">기본으로</button>' : ''}<span>정사각형으로 잘립니다 (얼굴이 위쪽)</span></div>
       <div class="up"><b>스탠딩</b><label class="pb">올리기<input type="file" accept="image/*" data-up="stand"></label>${st ? '<button class="pb" data-clr="stand">기본으로</button>' : ''}<span>세로 전신 · 배경 투명 PNG 권장</span></div>${st ? `<div class="crop"><b>보이는 영역</b><span>왼쪽 그림을 끌어서 위치, 휠로 확대</span><label>확대<input type="range" min="1" max="3" step="0.05" data-pos="z" value="${PF.standPos(ch.id).z}"></label><label>가로<input type="range" min="0" max="100" data-pos="x" value="${PF.standPos(ch.id).x}"></label><label>세로<input type="range" min="0" max="100" data-pos="y" value="${PF.standPos(ch.id).y}"></label><button class="pb" data-posreset>처음대로</button></div>` : ''}</div>
-    <p style="font-size:12px;color:var(--mut);margin:4px 0 0">지금은 이 기기에만 저장됩니다. 온라인 방에서는 입장할 때 내 캐릭터와 이미지가 다른 사람에게 전달됩니다.</p>
+    <p style="font-size:12px;color:var(--mut);margin:4px 0 0">로그인하면 서버에, 아니면 이 기기에 저장됩니다. 온라인 방에서는 내 닉네임 · 이미지가 다른 사람에게도 보입니다.</p>
   </div></div><div class="foot"><button class="go sec" data-a="close">닫기</button></div></div>`;
 }
 function statsHTML() {
