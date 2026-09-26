@@ -55,7 +55,7 @@ const PF = {
           else if (x.from === m && !x.tsumo && !dealt) { st.dealin++; dealt = true; } }); } }
     if (G.over && st.lastGame !== gid && G.rank) { st.lastGame = gid; ch = true; const k = G.rank.indexOf(m), S = G.seats[m];
       st.games++; (G.n === 3 ? st.rank3 : st.rank4)[k]++; st.maxPts = Math.max(st.maxPts ?? -1e9, S.pts);
-      st.recent.unshift({ d: Date.now(), n: G.n, len: G.len, rank: k + 1, pts: S.pts, who: G.rank.map(i => G.seats[i].name) }); st.recent = st.recent.slice(0, 20); }
+      st.recent.unshift({ d: Date.now(), n: G.n, len: G.len, rank: k + 1, pts: S.pts, who: G.rank.map(i => G.seats[i].name) }); st.recent = st.recent.slice(0, 20); if (G.ranked && window.RANK) RANK.apply(G, m); }
     if (ch) this.save();
   }
 };
@@ -83,7 +83,7 @@ function pfCardHTML() {
   const s = PF.d.stats, ch = CH[PF.d.char], r = s.rank4.some(Boolean) ? s.rank4 : s.rank3;
   return `<div class="pfc">${standHTML(ch, PF.img(ch.id, 'stand'), 'sm', PF.standPos(ch.id))}<div style="min-width:0"><div class="k">내 프로필</div><div class="nk">${esc(PF.d.nick)}</div>
     <div class="ms"><div>대국<b>${s.games}</b></div><div>평균 순위<b>${avgRank(r)}</b></div><div>화료율<b>${pct(s.wins, s.hands)}</b></div><div>최고 화료<b>${s.best ? esc(s.best.short) : '–'}</b></div></div>
-    <div style="display:flex;gap:6px"><button class="pb" data-m="profile">프로필 · 스킨</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="yakubook">족보</button></div></div></div>`;
+    <div style="display:flex;gap:6px"><button class="pb" data-m="profile">프로필 · 스킨</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="rank">랭크</button><button class="pb" data-m="yakubook">족보</button></div></div></div>`;
 }
 const pfTabs = on => `<div class="seg" style="width:280px;margin:10px 0 14px">${[['profile', '프로필 · 스킨'], ['stats', '전적']].map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
 function profileHTML() {

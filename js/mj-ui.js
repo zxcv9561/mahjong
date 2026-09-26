@@ -160,8 +160,8 @@ function renderPanel() {
   const m = me(), host = !isGuest() || !!(window.NET && NET.owner);
   const sb = G.seats.map((S, i) => `<span class="w">${HONOR_K[seatW(G, i) - 27]}</span><span class="n ${i === m ? 'me' : ''}">${avatar(i, 18)}${esc(S.name)}${S.bot ? `<span class="lv">봇 · ${LV[S.level]}</span>` : S.remote ? `<span class="lv">${S.online ? '온라인' : '참가 대기'}</span>` : ''}${S.remote && !S.online && host ? ` <button class="pb" data-bot="${i}" style="height:20px;font-size:10px">봇으로</button>` : ''}</span><span class="p">${S.pts}${S.riichi ? ' · 리치' : ''}</span>`).join('');
   const online = window.NET && NET.role ? `<div class="box" style="padding:7px 10px;font-size:12.5px"><b>온라인 방 ${esc(NET.code || '')}</b> · ${NET.owner ? '방장' : '참가자'} · 접속 ${G.seats.filter(S => S.online).length}명 · 서버 판정</div>` : '';
-  $('panel').innerHTML = `<div class="ph"><div><div class="t">麻雀</div><div class="k">리치 마작 · ${roundLabel(G)} · ${G.honba}본장</div></div>
-    <div class="btns"><button class="pb" data-m="assist">도움</button><button class="pb" data-m="yakubook">족보</button><button class="pb" data-m="rules">규칙</button>${host && G.seats.some(S => S.remote) && !(window.NET && NET.role) ? '<button class="pb" data-m="room">방 만들기</button>' : ''}</div></div>
+  $('panel').innerHTML = `<div class="ph"><div><div class="t">麻雀</div><div class="k">${G.ranked ? '경쟁전 · ' : '리치 마작 · '}${roundLabel(G)} · ${G.honba}본장</div></div>
+    <div class="btns"><button class="pb" data-m="assist">도움</button><button class="pb" data-m="yakubook">족보</button><button class="pb" data-m="rules">규칙</button><button class="pb" data-m="exit">나가기</button>${host && G.seats.some(S => S.remote) && !(window.NET && NET.role) ? '<button class="pb" data-m="room">방 만들기</button>' : ''}</div></div>
     <div class="sb">${sb}</div>${online}${assistHTML()}${AS.tutor && tipText() ? `<div class="box tip"><h4>튜토리얼</h4><p>${tipText()}</p></div>` : ''}
     <div class="log">${G.log.slice(-40).reverse().map(l => `<div>${esc(l.text)}</div>`).join('')}</div>`;
 }
@@ -169,7 +169,7 @@ function renderPanel() {
 function renderModal() {
   let h = '';
   if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
-  else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
+  else if (UI.modal === 'rank') h = rankHTML(); else if (UI.modal === 'exit') h = exitHTML(); else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
   const ov = $('ov'); ov.innerHTML = h; ov.hidden = !h;
 }
 function payHTML(pay) { return `<div class="pay">${G.seats.map((S, i) => `<div>${esc(S.name)}<b class="${pay[i] > 0 ? 'plus' : pay[i] < 0 ? 'minus' : ''}">${pay[i] > 0 ? '+' : ''}${pay[i]}</b>${S.pts}</div>`).join('')}</div>`; }
@@ -200,9 +200,9 @@ function winBody(R) {
     <div class="tot"><span>${r.ym ? '' : `${r.han}판 ${r.fu}부`} ${r.label}</span><b>${R.pay[R.k] > 0 ? '+' : ''}${R.pay[R.k]}</b></div>${calc}`;
 }
 function overHTML() {
-  return `<div class="md win">${standHTML(charOf(G.rank[0]), skinOf(G.rank[0]).stand, '', skinOf(G.rank[0]).pos)}<div style="min-width:0"><div class="stampbox">[ 終局 ]</div><div class="k">게임 종료 · ${G.len === 'ton' ? '동풍전' : '반장전'}</div><h2>최종 순위</h2>
+  return `<div class="md win">${standHTML(charOf(G.rank[0]), skinOf(G.rank[0]).stand, '', skinOf(G.rank[0]).pos)}<div style="min-width:0"><div class="stampbox">[ 終局 ]</div><div class="k">게임 종료 · ${G.ranked ? '경쟁전 · ' : ''}${G.len === 'ton' ? '동풍전' : '반장전'}</div><h2>최종 순위</h2>
     <table>${G.rank.map((i, k) => `<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><b>${k + 1}위</b>${avatar(i, 30)}${esc(G.seats[i].name)}${i === me() ? ' (나)' : ''}</span></td><td>${G.seats[i].pts}</td></tr>`).join('')}</table>
-    <p style="font-size:12px;color:var(--mut)">이번 대국 결과가 내 전적에 기록되었습니다.</p><div class="foot"><button class="go sec" data-m="stats">내 전적</button><button class="go" data-a="again">새 게임</button></div></div></div>`;
+    ${rankResHTML()}<p style="font-size:12px;color:var(--mut)">이번 대국 결과가 내 전적에 기록되었습니다.</p><div class="foot"><button class="go sec" data-m="stats">내 전적</button><button class="go" data-a="again">새 게임</button></div></div></div>`;
 }
 function assistSetHTML() {
   return `<div class="md" style="width:560px"><div class="k">설정</div><h2>초보자 도움 기능</h2>${AS_INFO.map(([k, n, d]) => `<div class="tg"><div><b>${n}</b><p>${d}</p></div><button class="sw ${AS[k] ? 'on' : ''}" data-as="${k}"></button></div>`).join('')}
@@ -227,28 +227,32 @@ function renderSetup() {
   const winds = ['東', '南', '西', '北'];
   st.innerHTML = `<div class="st-h"><div class="k">RIICHI MAHJONG</div><h1>리치 麻雀</h1><div class="sub">리치 마작 · 3인 / 4인 · 온라인 대국</div>${pfCardHTML()}
     <div class="note">혼자라면 봇과, 친구와 함께라면 자리를 <b>온라인 참가자</b>로 두고 시작한 뒤 오른쪽 위 <b>방 만들기</b>로 4자리 코드를 공유하세요. 친구는 아래 <b>참가하기</b>에 코드를 입력하면 됩니다.<br>초보라면 도움 기능을 켜 두세요. 게임 중에도 <b>도움</b> 버튼으로 하나씩 끄고 켤 수 있습니다.</div>
-    <div class="fg" style="margin-top:26px"><label>참가하기 · 코드 + 이름</label><div class="jn"><input id="jcode" placeholder="코드 4자리" maxlength="4" value="${esc(UI.join.code)}"><input id="jname" placeholder="내 이름" value="${esc(UI.join.name || PF.d.nick)}"><button class="go sec" data-a="join" style="height:36px;font-size:15px">참가</button></div></div></div>
+    <div class="fg" style="margin-top:26px"><label>참가하기 · 코드 + 이름</label><div class="jn"><input id="jcode" placeholder="코드 4자리" maxlength="4" value="${esc(UI.join.code)}"><input id="jname" placeholder="내 이름" value="${esc(UI.join.name || PF.d.nick)}"><button class="go sec" data-a="join" style="height:36px;font-size:15px">참가</button></div></div>
+    <div class="box rkbox"><div style="flex:1;min-width:0"><div class="k" style="margin-bottom:4px">경쟁전 · 4인 반장전 · 도움 끔</div>${rankLine()}</div><div style="display:flex;flex-direction:column;gap:6px"><button class="go" data-a="ranked" style="height:36px;font-size:15px">경쟁전 시작</button><button class="pb" data-m="rank">단계 보기</button></div></div></div>
     <div><div class="fg"><label>인원</label><div class="seg">${[4, 3].map(n => `<button class="${c.n === n ? 'on' : ''}" data-cfg="n" data-v="${n}">${n}인${n === 3 ? ' (산마)' : ''}</button>`).join('')}</div></div>
     <div class="fg"><label>길이</label><div class="seg">${[['han', '반장전 (동·남)'], ['ton', '동풍전 (동)']].map(([k, n]) => `<button class="${c.len === k ? 'on' : ''}" data-cfg="len" data-v="${k}">${n}</button>`).join('')}</div></div>
     <div class="fg"><label>적도라 (빨간 5)</label><div class="seg">${[[true, '있음'], [false, '없음']].map(([k, n]) => `<button class="${c.aka === k ? 'on' : ''}" data-cfg="aka" data-v="${k}">${n}</button>`).join('')}</div></div>
     <div class="fg"><label>자리</label><div class="seat"><b>${winds[0]}</b><span style="display:flex;align-items:center;gap:8px;font-weight:800">${avHTML(CH.me, PF.img('me', 'face'), 28)}${esc(PF.d.nick)}</span><span style="font-size:13px;color:var(--mut)">나 (이 기기)</span></div>
       ${c.seats.slice(0, c.n - 1).map((v, i) => `<div class="seat"><b>${winds[i + 1]}</b><span style="font-size:13px">자리 ${i + 2}</span><select data-seat="${i}">${[['low', '봇 · 약함'], ['mid', '봇 · 보통'], ['high', '봇 · 강함'], ['remote', '온라인 참가자']].map(([k, n]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`).join('')}</div>
     <div class="fg"><label>도움 기능 · 켜고 끄기</label><div style="display:flex;flex-wrap:wrap;gap:6px">${AS_INFO.map(([k, n]) => `<button class="pb ${AS[k] ? 'on' : ''}" data-as="${k}">${n}</button>`).join('')}</div></div>
-    <div style="display:flex;gap:10px;margin-top:18px"><button class="go" data-a="start">대국 시작</button>${saved && !saved.over ? '<button class="go sec" data-a="resume">이어하기</button>' : ''}</div></div>`;
+    <div style="display:flex;gap:10px;margin-top:18px"><button class="go" data-a="start">일반전 시작</button>${saved && !saved.over ? `<button class="go sec" data-a="resume">${saved.ranked ? '경쟁전 ' : ''}이어하기</button>` : ''}</div></div>`;
 }
-function startGame() {
-  const c = UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.slice());
+function startGame(ranked) {
+  forfeitSaved(); RANK.off();
+  const c = ranked ? { n: 4, len: 'han', aka: true, seats: ['high', 'high', 'high'] } : UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.slice());
   const players = [{ name: nm, char: 'me' }].concat(c.seats.slice(0, c.n - 1).map((v, i) => v === 'remote' ? { name: `참가자 ${i + 1}`, remote: true, char: pool[i].id } : { name: `${pool[i].n} · 봇`, bot: true, level: v, char: pool[i].id }));
   UI.skins = {};
-  G = newGame({ n: c.n, len: c.len, aka: c.aka, players }); UI.modal = AS.tutor ? 'rules' : null;
+  G = newGame({ n: c.n, len: c.len, aka: c.aka, players }); if (ranked) { G.ranked = true; RANK.on(); } UI.modal = AS.tutor ? 'rules' : null;
   if (G.seats.some(S => S.remote) && window.CLOUD && CLOUD.user) { render(); return NET.create(); }
   after();
 }
+/* 끝나지 않은 경쟁전을 두고 새 대국을 시작하면 도중 이탈로 처리 */
+function forfeitSaved() { let s = null; try { s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {} if (s && s.ranked && !s.over && (!G || G.gid !== s.gid)) { RANK.apply(s, 0, true); localStorage.removeItem(SAVE_KEY); } }
 /* ── 입력 ── */
 document.addEventListener('click', e => {
   const q = s => e.target.closest(s); let el;
   if ((el = q('[data-cfg]'))) { const k = el.dataset.cfg, v = el.dataset.v; UI.cfg[k] = k === 'n' ? +v : k === 'aka' ? v === 'true' : v; UI.cfg.name = ($('myname') || {}).value || UI.cfg.name; return renderSetup(); }
-  if ((el = q('[data-as]'))) { AS[el.dataset.as] = !AS[el.dataset.as]; localStorage.setItem(AS_KEY, JSON.stringify(AS)); return G ? render() : renderSetup(); }
+  if ((el = q('[data-as]'))) { if (G && G.ranked) return toast('경쟁전에서는 도움 기능을 쓸 수 없습니다'); AS[el.dataset.as] = !AS[el.dataset.as]; localStorage.setItem(AS_KEY, JSON.stringify(AS)); return G ? render() : renderSetup(); }
   if ((el = q('[data-color]'))) { PF.d.color = el.dataset.color; PF.save(); return pfRefresh(); }
   if ((el = q('[data-clr]'))) { PF.clearImg('me', el.dataset.clr); return pfRefresh(); }
   if ((el = q('[data-m]'))) { const m = el.dataset.m; if (m === 'room') return NET.create(); UI.modal = m; return renderModal(); }
@@ -256,11 +260,13 @@ document.addEventListener('click', e => {
   if ((el = q('[data-d]'))) { const id = +el.dataset.d; if (!el.classList.contains('can')) return; const r = UI.riichi; UI.riichi = false; return doAct({ t: 'discard', id, riichi: r || undefined }); }
   if ((el = q('[data-a]'))) { const a = el.dataset.a, m = me();
     if (a === 'start') return startGame();
-    if (a === 'resume') { G = JSON.parse(localStorage.getItem(SAVE_KEY)); return after(); }
+    if (a === 'ranked') { UI.modal = null; return startGame(true); }
+    if (a === 'resume') { G = JSON.parse(localStorage.getItem(SAVE_KEY)); if (G.ranked) RANK.on(); return after(); }
+    if (a === 'exitgo') { if (G && G.ranked && !G.over) { RANK.apply(G, me(), true); localStorage.removeItem(SAVE_KEY); } if (window.NET && NET.role) NET.leave(); G = null; clearTimeout(T); UI.modal = null; RANK.off(); $('ov').hidden = true; return render(); }
     if (a === 'join') { UI.join = { code: $('jcode').value.trim(), name: $('jname').value.trim() || '참가자' }; if (!/^\d{4}$/.test(UI.join.code)) return toast('코드 4자리를 입력하세요'); return NET.join(UI.join.code, UI.join.name); }
     if (a === 'close') { UI.modal = null; renderModal(); return G ? render() : renderSetup(); }
     if (a === 'pfreset') { if (confirm('전적을 모두 지울까요? 되돌릴 수 없습니다.')) { PF.d.stats = PF.blank(); PF.save(); } return pfRefresh(); }
-    if (a === 'again') { if (window.NET && NET.role) NET.leave(); G = null; localStorage.removeItem(SAVE_KEY); clearTimeout(T); $('ov').hidden = true; return render(); }
+    if (a === 'again') { if (window.NET && NET.role) NET.leave(); RANK.off(); G = null; localStorage.removeItem(SAVE_KEY); clearTimeout(T); $('ov').hidden = true; return render(); }
     if (a === 'riichi') { UI.riichi = !UI.riichi; return renderTable(); }
     if (a === 'next') return doAct({ t: 'next' });
     if (a === 'tsumo' || a === 'kyuushu' || a === 'kita' || a === 'ron' || a === 'pon' || a === 'minkan' || a === 'pass') return doAct({ t: a });
