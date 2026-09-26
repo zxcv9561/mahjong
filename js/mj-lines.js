@@ -1,4 +1,25 @@
-/* MAHJONG — 대사 (내 대사 4칸 · 봇 상황 대사) · 봇 정보 편집 */
+/* MAHJONG — 대사 (내 대사 4칸 · 봇 상황 대사) · 봇 정보 편집
+   봇 정보는 서버 한 곳(mahjong.bot_config)에 저장되어 모두에게 같게 보입니다. 편집은 관리자(mahjong.admins)만 · 서버 정책으로도 막혀 있습니다. */
+const BOT_KEY = 'mj-botcfg';
+let BOTCFG = (() => { try { return JSON.parse(localStorage.getItem(BOT_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+const PF_SET_RAW = PF.setImg.bind(PF);   // mj-cloud 가 감싸기 전 원본 (이미지 줄이기만)
+const isAdmin = () => !!(window.CLOUD && CLOUD.admin);
+async function botLoad() { if (!window.CLOUD || !CLOUD.sb || !CLOUD.user) return;
+  const a = await CLOUD.sb.rpc('is_admin'); CLOUD.admin = !a.error && a.data === true;
+  const { data } = await CLOUD.sb.from('bot_config').select('data').eq('id', 1).maybeSingle();
+  BOTCFG = (data && data.data) || {}; try { localStorage.setItem(BOT_KEY, JSON.stringify(BOTCFG)); } catch (e) {} applyBots(); }
+let BOT_T = 0;
+function botSave() { if (!isAdmin()) return; try { localStorage.setItem(BOT_KEY, JSON.stringify(BOTCFG)); } catch (e) {}
+  clearTimeout(BOT_T); BOT_T = setTimeout(async () => { const { error } = await CLOUD.sb.from('bot_config').upsert({ id: 1, data: BOTCFG, updated_at: new Date().toISOString() }); if (error) toast('봇 정보 저장 실패 · ' + error.message); }, 700); }
+async function botUpload(id, kind, file) {
+  const r = await PF_SET_RAW('tmpbot', kind, file); if (r !== true) return r;
+  const k = `mj-skin-tmpbot-${kind}`, url = localStorage.getItem(k); localStorage.removeItem(k); if (!url) return false;
+  const blob = await (await fetch(url)).blob(), path = `bots/${id}-${kind}.${(blob.type.split('/')[1] || 'webp')}`;
+  const { error } = await CLOUD.sb.storage.from('mahjong-skins').upload(path, blob, { upsert: true, contentType: blob.type });
+  if (error) { toast('이미지 업로드 실패 · ' + error.message); return false; }
+  (botEd(id).img = botEd(id).img || {})[kind] = CLOUD.sb.storage.from('mahjong-skins').getPublicUrl(path).data.publicUrl + '?v=' + Date.now(); botSave(); return true; }
+function botClr(id, kind) { const e = botEd(id); if (e.img && e.img[kind]) { const p = e.img[kind].split('/mahjong-skins/')[1]; if (p) CLOUD.sb.storage.from('mahjong-skins').remove([p.split('?')[0]]); delete e.img[kind]; botSave(); } }
+const botImg = (id, kind) => ((BOTCFG[id] || {}).img || {})[kind] || null;
 const BOT_SIT = [['riichi', '리치할 때'], ['win', '화료할 때'], ['dealin', '방총했을 때'], ['top', '1위로 끝났을 때']];
 const BOT_DEF_LINES = {
   haru: ['간다, 리치!', '한 방이면 충분해.', '으윽, 너무 서둘렀나…', '역시 공격이 최고야!'],
@@ -11,15 +32,15 @@ const BOT_DEF_LINES = {
   dal: ['에라 모르겠다, 리치!', '오예, 운 좋다!', '뭐, 그럴 수도 있지~', '달님이 도와줬나 봐!'] };
 const CH_DEF = Object.fromEntries(CHARS.map(c => [c.id, { ...c }]));
 const BOT_COLORS = ['#C8252C', '#2E8B3D', '#1E4DDB', '#0A0A0C', '#6B3FA0', '#9A5418', '#0F6E72', '#E0B028'];
-function applyBots() { const o = PF.d.bots || {}; CHARS.forEach(c => { const e = o[c.id] || {}; Object.assign(c, CH_DEF[c.id], { n: e.n || CH_DEF[c.id].n, h: e.h || CH_DEF[c.id].h, c: e.c || CH_DEF[c.id].c, d: e.d || CH_DEF[c.id].d }); if (e.c) c.fg = e.c === '#E0B028' ? '#0A0A0C' : undefined; }); }
-const botEd = id => ((PF.d.bots = PF.d.bots || {})[id] = PF.d.bots[id] || {});
-const botLine = (id, i) => { const e = (PF.d.bots || {})[id]; const v = e && e.lines && e.lines[i]; return v != null && v !== '' ? v : (BOT_DEF_LINES[id] || [])[i] || ''; };
+function applyBots() { const o = BOTCFG; CHARS.forEach(c => { const e = o[c.id] || {}; Object.assign(c, CH_DEF[c.id], { n: e.n || CH_DEF[c.id].n, h: e.h || CH_DEF[c.id].h, c: e.c || CH_DEF[c.id].c, d: e.d || CH_DEF[c.id].d }); if (e.c) c.fg = e.c === '#E0B028' ? '#0A0A0C' : undefined; }); }
+const botEd = id => (BOTCFG[id] = BOTCFG[id] || {});
+const botLine = (id, i) => { const e = BOTCFG[id]; const v = e && e.lines && e.lines[i]; return v != null && v !== '' ? v : (BOT_DEF_LINES[id] || [])[i] || ''; };
 const myLines = () => { const l = PF.d.lines || (PF.d.lines = ['', '', '', '']); while (l.length < 4) l.push(''); return l; };
 applyBots();
 
 /* 봇 이미지: 이 기기 기준 · 봇 자리에는 봇 캐릭터 이미지를 씀 */
 const _skinOfBase = skinOf;
-skinOf = function (s) { const S = G && G.seats[s]; if (S && S.bot && S.char && CH_DEF[S.char]) { const k = 'bot-' + S.char; return { face: PF.img(k, 'face'), stand: PF.img(k, 'stand'), pos: PF.standPos(k) }; } return _skinOfBase(s); };
+skinOf = function (s) { const S = G && G.seats[s]; if (S && S.bot && S.char && CH_DEF[S.char]) { const e = BOTCFG[S.char] || {}; return { face: botImg(S.char, 'face'), stand: botImg(S.char, 'stand'), pos: e.pos }; } return _skinOfBase(s); };
 
 /* ── 말풍선 ── */
 function sayShow(s, text) {
@@ -63,12 +84,13 @@ function linesHTML() {
     <div class="foot"><button class="go sec" data-a="close">닫기</button></div></div>`;
 }
 function botEditHTML() {
-  const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id, c = CH[id], e = botEd(id), k = 'bot-' + id, face = PF.img(k, 'face'), st = PF.img(k, 'stand');
-  const list = CHARS.map(x => `<button class="ch ${x.id === id ? 'on' : ''}" data-bsel="${x.id}">${avHTML(x, PF.img('bot-' + x.id, 'face'), 34)}<b>${esc(x.n)}</b></button>`).join('');
+  if (!isAdmin()) return '';
+  const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id, c = CH[id], e = botEd(id), face = botImg(id, 'face'), st = botImg(id, 'stand');
+  const list = CHARS.map(x => `<button class="ch ${x.id === id ? 'on' : ''}" data-bsel="${x.id}">${avHTML(x, botImg(x.id, 'face'), 34)}<b>${esc(x.n)}</b></button>`).join('');
   return `<div class="md pf"><div class="k">내 프로필</div>${pfTabs('bots')}
-    <p style="font-size:13px;margin:0 0 12px;color:var(--mut)">봇 이름 · 색 · 이미지 · 대사를 바꿀 수 있습니다. 이 기기(로그인하면 내 계정)에서만 적용되고, 다음 대국부터 반영됩니다. 칸을 비우면 기본값으로 돌아갑니다.</p>
+    <p style="font-size:13px;margin:0 0 12px;color:var(--mut)">관리자 전용 · 여기서 바꾼 봇 이름 · 색 · 이미지 · 대사는 서버에 저장되어 모든 사람에게 같게 보입니다(다음 대국부터). 칸을 비우면 기본값으로 돌아갑니다.</p>
     <div class="chs" style="grid-template-columns:repeat(8,minmax(0,1fr));margin-bottom:14px">${list}</div>
-    <div class="pfg" style="grid-template-columns:200px minmax(0,1fr)">${standHTML(c, st, '', PF.standPos(k)).replace('class="stand', 'style="width:200px;height:340px" class="stand')}<div style="min-width:0">
+    <div class="pfg" style="grid-template-columns:200px minmax(0,1fr)">${standHTML(c, st, '', e.pos).replace('class="stand', 'style="width:200px;height:340px" class="stand')}<div style="min-width:0">
       <div style="display:grid;grid-template-columns:1fr 90px;gap:10px"><div class="fg"><label>이름</label><input class="pfin" style="width:100%" maxlength="8" data-bf="n" value="${esc(e.n || '')}" placeholder="${esc(CH_DEF[id].n)}"></div><div class="fg"><label>한자</label><input class="pfin" style="width:100%" maxlength="1" data-bf="h" value="${esc(e.h || '')}" placeholder="${esc(CH_DEF[id].h)}"></div></div>
       <div class="fg"><label>소개</label><input class="pfin" style="width:100%" maxlength="20" data-bf="d" value="${esc(e.d || '')}" placeholder="${esc(CH_DEF[id].d)}"></div>
       <div class="fg"><label>색</label><div style="display:flex;gap:8px">${BOT_COLORS.map(v => `<button class="pb" data-bcolor="${v}" aria-label="${v}" style="width:30px;height:30px;padding:0;background:${v};border:${v === c.c ? '3px solid var(--ink)' : '1px solid var(--line)'};outline:${v === c.c ? '2px solid #fff' : 'none'};outline-offset:-5px"></button>`).join('')}</div></div>
@@ -83,18 +105,19 @@ function botEditHTML() {
 document.addEventListener('click', e => {
   const q = s => e.target.closest && e.target.closest(s); let el;
   if ((el = q('[data-say]'))) { UI.modal = null; renderModal(); return saySend(+el.dataset.say); }
+  if (!isAdmin() && q('[data-bsel],[data-bcolor],[data-bclr],[data-breset]')) return;
   if ((el = q('[data-bsel]'))) { UI.bsel = el.dataset.bsel; return renderModal(); }
   const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id;
-  if ((el = q('[data-bcolor]'))) { botEd(id).c = el.dataset.bcolor; applyBots(); PF.save(); return pfRefresh(); }
-  if ((el = q('[data-bclr]'))) { PF.clearImg('bot-' + id, el.dataset.bclr); return pfRefresh(); }
-  if (q('[data-breset]')) { if (!confirm('이 봇의 이름 · 색 · 대사 · 이미지를 기본값으로 되돌릴까요?')) return; delete PF.d.bots[id]; ['face', 'stand'].forEach(k => PF.clearImg('bot-' + id, k)); applyBots(); PF.save(); return pfRefresh(); }
+  if ((el = q('[data-bcolor]'))) { botEd(id).c = el.dataset.bcolor; applyBots(); botSave(); return pfRefresh(); }
+  if ((el = q('[data-bclr]'))) { botClr(id, el.dataset.bclr); return pfRefresh(); }
+  if (q('[data-breset]')) { if (!confirm('이 봇의 이름 · 색 · 대사 · 이미지를 기본값으로 되돌릴까요?')) return; ['face', 'stand'].forEach(k => botClr(id, k)); delete BOTCFG[id]; applyBots(); botSave(); return pfRefresh(); }
 });
 document.addEventListener('input', e => { const t = e.target;
   if (t.dataset.line != null) { myLines()[+t.dataset.line] = t.value.slice(0, 30); return PF.save(); }
-  const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id;
-  if (t.dataset.bf) { botEd(id)[t.dataset.bf] = t.value.trim(); applyBots(); return PF.save(); }
-  if (t.dataset.bl != null) { const E = botEd(id); E.lines = E.lines || ['', '', '', '']; E.lines[+t.dataset.bl] = t.value.slice(0, 30); return PF.save(); }
+  if (!isAdmin()) return; const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id;
+  if (t.dataset.bf) { botEd(id)[t.dataset.bf] = t.value.trim(); applyBots(); return botSave(); }
+  if (t.dataset.bl != null) { const E = botEd(id); E.lines = E.lines || ['', '', '', '']; E.lines[+t.dataset.bl] = t.value.slice(0, 30); return botSave(); }
 });
-document.addEventListener('change', async e => { const el = e.target.closest && e.target.closest('[data-bup]'); if (!el || !el.files[0]) return;
-  const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id, r = await PF.setImg('bot-' + id, el.dataset.bup, el.files[0]);
+document.addEventListener('change', async e => { const el = e.target.closest && e.target.closest('[data-bup]'); if (!el || !el.files[0] || !isAdmin()) return;
+  const id = UI.bsel && CH_DEF[UI.bsel] ? UI.bsel : CHARS[0].id; toast('올리는 중…'); const r = await botUpload(id, el.dataset.bup, el.files[0]);
   if (r === 'full') toast('저장 공간이 부족합니다 · 더 작은 이미지를 올려 주세요'); else if (!r) toast('이미지를 읽지 못했습니다'); pfRefresh(); });

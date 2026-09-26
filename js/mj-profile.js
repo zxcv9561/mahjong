@@ -83,9 +83,9 @@ function pfCardHTML() {
   const s = PF.d.stats, ch = CH[PF.d.char], r = s.rank4.some(Boolean) ? s.rank4 : s.rank3;
   return `<div class="pfc">${standHTML(ch, PF.img(ch.id, 'stand'), 'sm', PF.standPos(ch.id))}<div style="min-width:0"><div class="k">내 프로필</div><div class="nk">${esc(PF.d.nick)}</div>
     <div class="ms"><div>대국<b>${s.games}</b></div><div>평균 순위<b>${avgRank(r)}</b></div><div>화료율<b>${pct(s.wins, s.hands)}</b></div><div>최고 화료<b>${s.best ? esc(s.best.short) : '–'}</b></div></div>
-    <div style="display:flex;gap:6px"><button class="pb" data-m="profile">프로필 · 스킨</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="rank">랭크</button><button class="pb" data-m="yakubook">족보</button><button class="pb" data-m="bots">봇 편집</button></div></div></div>`;
+    <div style="display:flex;gap:6px"><button class="pb" data-m="profile">프로필 · 스킨</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="rank">랭크</button><button class="pb" data-m="yakubook">족보</button>${window.CLOUD && CLOUD.admin ? '<button class="pb" data-m="bots">봇 편집</button>' : ''}</div></div></div>`;
 }
-const pfTabs = on => `<div class="seg" style="width:520px;margin:10px 0 14px">${[['profile', '프로필 · 스킨'], ['lines', '대사'], ['bots', '봇 편집'], ['stats', '전적']].map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
+const pfTabs = on => `<div class="seg" style="width:520px;margin:10px 0 14px">${[['profile', '프로필 · 스킨'], ['lines', '대사']].concat(window.CLOUD && CLOUD.admin ? [['bots', '봇 편집']] : []).concat([['stats', '전적']]).map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
 function profileHTML() {
   const ch = CH[PF.d.char], face = PF.img(ch.id, 'face'), st = PF.img(ch.id, 'stand');
   return `<div class="md pf"><div class="k">내 프로필</div>${pfTabs('profile')}<div class="pfg">${standHTML(ch, st, '', PF.standPos(ch.id))}<div style="min-width:0">

@@ -171,7 +171,7 @@ function renderPanel() {
 /* ── 모달 ── */
 function renderModal() {
   let h = '';
-  if (UI.modal === 'say') h = sayHTML(); else if (UI.modal === 'lines') h = linesHTML(); else if (UI.modal === 'bots') h = botEditHTML(); else if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
+  if (UI.modal === 'say') h = sayHTML(); else if (UI.modal === 'lines') h = linesHTML(); else if (UI.modal === 'bots') { h = botEditHTML(); if (!h) UI.modal = null; } else if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
   else if (UI.modal === 'rank') h = rankHTML(); else if (UI.modal === 'exit') h = exitHTML(); else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
   const ov = $('ov'); ov.innerHTML = h; ov.hidden = !h;
 }
