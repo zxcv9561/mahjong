@@ -164,14 +164,14 @@ function renderPanel() {
   const sb = G.seats.map((S, i) => `<span class="w">${HONOR_K[seatW(G, i) - 27]}</span><span class="n ${i === m ? 'me' : ''}">${avatar(i, 18)}${esc(S.name)}${S.bot ? `<span class="lv">봇 · ${LV[S.level]}</span>` : S.remote ? `<span class="lv">${S.online ? '온라인' : '참가 대기'}</span>` : ''}${S.remote && !S.online && host ? ` <button class="pb" data-bot="${i}" style="height:20px;font-size:10px">봇으로</button>` : ''}</span><span class="p">${S.pts}${S.riichi ? ' · 리치' : ''}</span>`).join('');
   const online = window.NET && NET.role ? `<div class="box" style="padding:7px 10px;font-size:12.5px"><b>온라인 방 ${esc(NET.code || '')}</b> · ${NET.owner ? '방장' : '참가자'} · 접속 ${G.seats.filter(S => S.online).length}명 · 서버 판정</div>` : '';
   $('panel').innerHTML = `<div class="ph"><div><div class="t">麻雀</div><div class="k">${G.ranked ? '경쟁전 · ' : '리치 마작 · '}${roundLabel(G)} · ${G.honba}본장</div></div>
-    <div class="btns"><button class="pb" data-m="assist">도움</button><button class="pb" data-m="yakubook">족보</button><button class="pb" data-m="rules">규칙</button><button class="pb" data-m="exit">나가기</button>${host && G.seats.some(S => S.remote) && !(window.NET && NET.role) ? '<button class="pb" data-m="room">방 만들기</button>' : ''}</div></div>
+    <div class="btns"><button class="pb" data-m="assist">도움</button><button class="pb" data-m="yakubook">족보</button><button class="pb" data-m="rules">규칙</button><button class="pb" data-m="say">대사</button><button class="pb" data-m="exit">나가기</button>${host && G.seats.some(S => S.remote) && !(window.NET && NET.role) ? '<button class="pb" data-m="room">방 만들기</button>' : ''}</div></div>
     <div class="sb">${sb}</div>${online}${assistHTML()}${AS.tutor && tipText() ? `<div class="box tip"><h4>튜토리얼</h4><p>${tipText()}</p></div>` : ''}
     <div class="log">${G.log.slice(-40).reverse().map(l => `<div>${esc(l.text)}</div>`).join('')}</div>`;
 }
 /* ── 모달 ── */
 function renderModal() {
   let h = '';
-  if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
+  if (UI.modal === 'say') h = sayHTML(); else if (UI.modal === 'lines') h = linesHTML(); else if (UI.modal === 'bots') h = botEditHTML(); else if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
   else if (UI.modal === 'rank') h = rankHTML(); else if (UI.modal === 'exit') h = exitHTML(); else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
   const ov = $('ov'); ov.innerHTML = h; ov.hidden = !h;
 }
@@ -241,7 +241,7 @@ function renderSetup() {
     <div style="display:flex;gap:10px;margin-top:18px"><button class="go" data-a="start">일반전 시작</button>${saved && !saved.over ? `<button class="go sec" data-a="resume">${saved.ranked ? '경쟁전 ' : ''}이어하기</button>` : ''}</div></div>`;
 }
 function startGame(ranked) {
-  forfeitSaved(); RANK.off();
+  forfeitSaved(); RANK.off(); if (window.applyBots) applyBots();
   const c = ranked ? { n: 4, len: 'han', aka: true, seats: ['high', 'high', 'high'] } : UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.slice());
   const players = [{ name: nm, char: 'me' }].concat(c.seats.slice(0, c.n - 1).map((v, i) => v === 'remote' ? { name: `참가자 ${i + 1}`, remote: true, char: pool[i].id } : { name: `${pool[i].n} · 봇`, bot: true, level: v, char: pool[i].id }));
   UI.skins = {};
@@ -292,8 +292,8 @@ document.addEventListener('input', e => { if (e.target.id !== 'pfnick') return; 
 /* ── 컷인 (퐁 · 치 · 깡 · 리치 · 론 · 쯔모) ── */
 let CUT = null;
 function cutCheck() {
-  if (!G) return; const snap = { gid: G.gid, hand: G.handNo + ':' + G.honba + ':' + G.kyoku + ':' + G.wind, melds: G.seats.map(S => S.melds.length), riichi: G.seats.map(S => !!S.riichi), end: G.phase === 'end' };
-  const P = CUT; CUT = snap; if (!P || P.gid !== snap.gid || P.hand !== snap.hand) return;
+  if (!G) return; const snap = { gid: G.gid, hand: G.handNo + ':' + G.honba + ':' + G.kyoku + ':' + G.wind, melds: G.seats.map(S => S.melds.length), riichi: G.seats.map(S => !!S.riichi), end: G.phase === 'end', over: !!G.over };
+  const P = CUT; CUT = snap; if (window.botTalk) botTalk(P, snap); if (!P || P.gid !== snap.gid || P.hand !== snap.hand) return;
   if (snap.end && !P.end && G.result && G.result.type === 'win') { const R = G.result; return showCut(R.k, R.tsumo ? '쯔모' : '론', 'win'); }
   for (let s = 0; s < G.n; s++) {
     if (snap.riichi[s] && !P.riichi[s]) return showCut(s, '리치', 'riichi');
