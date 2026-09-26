@@ -1,6 +1,6 @@
 @font-face{font-family:'EF Macho';src:url('fonts/EF_MACHO.otf') format('opentype');font-weight:900;font-display:swap}
 :root{--paper:#F4F1EA;--paper2:#ECE7DB;--edge:#D6CFBE;--ink:#0A0A0C;--ink2:#1B1B1F;--mut:#5C5A55;--faint:#8A8780;--bone:#FBFAF6;--blue:#1E4DDB;--green:#2E8B3D;--red:#C8252C;--yellow:#E0B028;--mono:'IBM Plex Mono',monospace;--disp:'EF Macho','Black Han Sans',sans-serif;--body:'Noto Sans KR',sans-serif;--serif:'Noto Serif KR',serif}
-*{box-sizing:border-box}html,body{margin:0;height:100%;background:#1B1B1F;overflow:hidden;font-family:var(--body);color:var(--ink)}
+*{box-sizing:border-box}#sa-probe{position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}html,body{margin:0;height:100%;background:#1B1B1F;overflow:hidden;font-family:var(--body);color:var(--ink)}
 a{color:var(--ink)}a:hover{color:var(--blue)}
 button{font-family:inherit;cursor:pointer;color:var(--ink)}select,input{color:var(--ink)}
 .ov[hidden]{display:none!important}

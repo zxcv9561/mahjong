@@ -11,7 +11,10 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const isGuest = () => window.NET && NET.role === 'guest';
 function me() { if (isGuest()) return NET.seat; if (!G) return 0; const i = G.seats.findIndex(S => !S.bot && !S.remote); return i < 0 ? 0 : i; }
-function fit() { const s = Math.min(innerWidth / 1280, innerHeight / 720); $('stage').style.transform = `translate(-50%,-50%) scale(${s})`; }
+function fit() { const vv = window.visualViewport, w = vv ? vv.width : innerWidth, h = vv ? vv.height : innerHeight, pr = document.getElementById('sa-probe') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'sa-probe' })), cs = getComputedStyle(pr), inset = k => parseFloat(cs[{ '--st': 'paddingTop', '--sb': 'paddingBottom', '--sl': 'paddingLeft', '--sr': 'paddingRight' }[k]]) || 0;
+  const mob = matchMedia('(pointer: coarse)').matches, pad = mob ? 10 : 0, aw = w - inset('--sl') - inset('--sr') - pad * 2, ah = h - inset('--st') - inset('--sb') - pad * 2;
+  const s = Math.min(aw / 1280, ah / 720), cx = inset('--sl') + pad + aw / 2, cy = inset('--st') + pad + ah / 2;
+  const st = $('stage'); st.style.left = cx + 'px'; st.style.top = cy + 'px'; st.style.transform = `translate(-50%,-50%) scale(${s})`; }
 function toast(m) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; $('stage').appendChild(d); setTimeout(() => d.remove(), 1800); }
 function save() { if (isGuest() || !G) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) {} }
 
@@ -274,7 +277,7 @@ document.addEventListener('click', e => {
     if (a === 'chi') { const o = G.pend.opts[m].filter(x => x.t === 'chi')[+el.dataset.j]; return doAct({ t: 'chi', ids: o.ids }); } }
 });
 document.addEventListener('keydown', e => { if (!G || e.target.tagName === 'INPUT') return; const m = me(); if (e.code === 'Space' && G.phase === 'call' && G.pend.opts[m] && !G.pend.resp[m]) { e.preventDefault(); doAct({ t: 'pass' }); } });
-addEventListener('resize', fit);
+addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 250)); if (window.visualViewport) visualViewport.addEventListener('resize', fit);
 fit(); render();
 
 document.addEventListener('mouseover', e => { const tp = $('tip'); if (!tp) return; const el = e.target.closest && e.target.closest('.tl[data-t]');
