@@ -9,16 +9,26 @@ function botYakuRoute(G, s, addT) {
   if (mx + hon >= tiles.length - 1 && S.melds.every(m => m.t >= 27 || Math.floor(m.t / 9) === suits.indexOf(mx))) return true;
   return false;
 }
-function danger(G, s, t) {
-  let d = 0;
-  G.seats.forEach((O, o) => { if (o === s || !O.riichi) return;
+function threatOf(G, o) {
+  const O = G.seats[o]; if (O.riichi) return { w: 1, only: null, why: '리치' };
+  const n = O.melds.length; if (n < 2) return null;
+  const su = [...new Set(O.melds.map(x => x.t < 27 ? Math.floor(x.t / 9) : 3))], num = su.filter(x => x < 3);
+  const flush = num.length <= 1, yh = O.melds.some(x => x.k !== 'chi' && (x.t >= 31 || x.t === seatW(G, o) || x.t === 27 + G.wind));
+  const w = n >= 3 ? 0.9 : flush || yh ? 0.7 : 0.45;
+  return { w, only: flush ? (num.length ? num[0] : 'hon') : null, why: flush ? (num.length ? ['만수', '통수', '삭수'][num[0]] + ' 혼일색 · 청일색 의심' : '자패 위주') : n + '副露' };
+}
+function danger(G, s, t, ro) {
+  let d = 0; const vis = visibleCounts(G, s);
+  G.seats.forEach((O, o) => { if (o === s || (ro && !O.riichi)) return; const th = threatOf(G, o); if (!th) return;
     const ri = O.river.findIndex(r => r.r), gen = new Set(O.river.map(r => tT(r.id)));
-    G.seats.forEach(X => X.river.forEach(r => { if (O.rN && r.n > O.rN) gen.add(tT(r.id)); }));
+    if (O.riichi) G.seats.forEach(X => X.river.forEach(r => { if (O.rN && r.n > O.rN) gen.add(tT(r.id)); }));
     let v; if (gen.has(t)) v = 0;
-    else if (isHon(t)) v = visibleCounts(G, s)[t] >= 3 ? 0.5 : 2.5;
-    else { const r = t % 9, b = t - r, suji = (r - 3 >= 0 && gen.has(b + r - 3)) + (r + 3 <= 8 && gen.has(b + r + 3)), edge = r < 3 || r > 5;
-      v = suji >= (edge ? 1 : 2) ? 2 : suji ? 3.5 : (r === 0 || r === 8) ? 4 : 6; }
-    if (ri < 0) v *= 0.6; d = Math.max(d, v); });
+    else if (isHon(t)) v = vis[t] >= 3 ? 0.5 : vis[t] === 2 ? 2 : 2.5;
+    else { const r = t % 9, b = t - r, kab = x => x >= 0 && x <= 8 && vis[b + x] >= 4, L = r >= 3, R = r <= 5;
+      const sL = !L || gen.has(b + r - 3) || kab(r - 1) || kab(r - 2), sR = !R || gen.has(b + r + 3) || kab(r + 1) || kab(r + 2);
+      v = sL && sR ? 2 : L && R && (sL || sR) ? 3.5 : (r === 0 || r === 8) ? 4 : 6; }
+    if (th.only != null && v > 0) { if (th.only === 'hon' ? !isHon(t) : !isHon(t) && Math.floor(t / 9) !== th.only) v *= 0.08; }
+    if (O.riichi && ri < 0) v *= 0.6; v *= th.w; d = Math.max(d, v); });
   return d;
 }
 function ukeire(G, s, c, fm, sh) {
@@ -31,11 +41,14 @@ function botDiscard(G, s) {
   const sw = seatW(G, s), rw = 27 + G.wind;
   const cand = types.map(t => { c[t]--; const sh = shanten(c, fm); const u = lv === 'low' ? 0 : ukeire(G, s, c, fm, sh); c[t]++;
     const iso = isHon(t) ? (c[t] === 1 ? (isDragon(t) || t === sw || t === rw ? 1.5 : 3) : 0) : (t % 9 === 0 || t % 9 === 8 ? 1 : 0);
-    return { t, sh, u, iso, dz: danger(G, s, t) }; });
+    return { t, sh, u, iso, dz: lv === 'low' ? 0 : danger(G, s, t, lv === 'mid') }; });
   const best = Math.min(...cand.map(x => x.sh));
-  const threat = G.seats.some((O, o) => o !== s && O.riichi);
-  let pool = cand;
-  if (threat && ((lv === 'high' && best >= 1) || (lv === 'mid' && best >= 2))) pool = cand.slice().sort((a, b) => a.dz - b.dz || a.sh - b.sh || b.u - a.u);
+  /* 난이도별 수비 · 약함: 수비 안 함 · 보통: 리치만 보고, 2샹텐 이상이면 현물 위주로 접음 · 강함: 리치 + 울음 상대까지 보고, 샹텐에 따라 공격/수비 저울질 */
+  const threat = lv !== 'low' && G.seats.some((O, o) => o !== s && (lv === 'mid' ? O.riichi : threatOf(G, o)));
+  let pool;
+  if (threat && lv === 'mid' && best >= 2) pool = cand.slice().sort((a, b) => (a.dz > 0) - (b.dz > 0) || a.sh - b.sh || b.u - a.u || a.dz - b.dz);
+  else if (threat && lv === 'high') { const k = best === 0 ? 0.6 : best === 1 ? 2.2 : 6, sc = x => (x.sh - best) * 8 - Math.min(x.u, 40) * 0.12 + x.dz * k - x.iso * 0.1;
+    pool = cand.slice().sort((a, b) => sc(a) - sc(b)); }
   else pool = cand.slice().sort((a, b) => a.sh - b.sh || b.u - a.u || b.iso - a.iso);
   let pick = pool[0];
   if (lv === 'low' && Math.random() < 0.2) pick = cand[Math.floor(Math.random() * cand.length)];

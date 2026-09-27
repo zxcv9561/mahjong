@@ -10,9 +10,11 @@
     if (op === 'tick' && NET.busy) { NET.again = true; return null; }
     NET.busy = true;
     try {
-      const { data, error } = await CLOUD.sb.functions.invoke('mj', { body: Object.assign({ op, code: NET.code }, body) });
+      let ses = (await CLOUD.sb.auth.getSession()).data.session; if (ses && ses.expires_at * 1000 < Date.now() + 60000) ses = (await CLOUD.sb.auth.refreshSession()).data.session || ses;
+      if (!ses) { toast('로그인이 만료되었습니다 · 다시 로그인하세요'); CLOUD.showLogin && CLOUD.showLogin(); return null; }
+      const { data, error } = await CLOUD.sb.functions.invoke('mj', { body: Object.assign({ op, code: NET.code }, body), headers: { Authorization: 'Bearer ' + ses.access_token } });
       let d = data;
-      if (error) { try { d = await error.context.json(); } catch (e) { d = { err: '서버에 연결하지 못했습니다' }; } }
+      if (error) { try { d = await error.context.json(); } catch (e) { d = { err: '서버에 연결하지 못했습니다' }; } if (d && !d.err) d.err = `서버 오류 ${error.context && error.context.status || ''} · ${d.code || ''} ${d.message || ''}`.trim(); }
       if (d && d.err && !(op === 'tick' && d.gone === undefined && !d.G)) toast(d.err);
       if (d && d.gone && op !== 'create') { if (op === 'tick' || op === 'resume') NET.leave(true); return d; }
       if (d && d.G) apply(d);
@@ -24,7 +26,7 @@
     if (v.ver < NET.ver && v.code === NET.code) return;
     const first = NET.code !== v.code;
     Object.assign(NET, { role: 'guest', seat: v.seat, code: v.code, ver: v.ver, owner: !!v.owner });
-    G = v.G; UI.skins = v.skins || {}; localStorage.setItem(LAST, v.code);
+    G = v.G; UI.skins = v.skins || {}; if (G && G.ranked && window.RANK) RANK.on(); localStorage.setItem(LAST, v.code);
     if (first) { subscribe(v.code); $('setup').hidden = true; }
     PF.record(G, NET.seat); cutCheck(); render();
     clearTimeout(NET.tt); if (!G.over) NET.tt = setTimeout(() => call('tick'), v.next == null ? 4000 : Math.min(4000, v.next + 80));
@@ -36,7 +38,7 @@
   NET.create = async () => {
     if (!need() || !G) return; if (NET.role) return toast(`방 코드 ${NET.code}`);
     const players = G.seats.map(S => ({ name: S.name, char: S.char, bot: !!S.bot, level: S.level, remote: !!S.remote }));
-    const d = await call('create', { code: '', players, n: G.n, len: G.len, aka: G.aka, afk: UI.cfg.afk ?? 20, skin: mySkin() });
+    const d = await call('create', { code: '', players, n: G.n, len: G.len, aka: G.aka, afk: UI.cfg.afk ?? 20, ranked: !!G.ranked, skin: mySkin() });
     if (d && d.G) toast(`방 코드 ${d.code} · 친구에게 알려주세요`);
   };
   NET.join = async (code, name) => {

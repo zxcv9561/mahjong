@@ -23,8 +23,10 @@ function tile(id, sz, extra = '') {
   if (id == null) return `<span class="tl ${sz} back ${extra}"></span>`;
   const t = tT(id), red = G && G.aka && isRed(id), lb = sz === 'L' && AS.label ? `<span class="lb">${t >= 27 ? HONOR_K[t - 27] : t % 9 + 1 + SUIT_K[Math.floor(t / 9)]}</span>` : '';
   if (t >= 27) return `<span data-t="${t}" class="tl ${sz} hon ${extra}">${tileFace(t)}${lb}</span>`;
-  const su = Math.floor(t / 9); return `<span data-t="${t}" class="tl ${sz} s${su} ${red ? 'red' : ''} ${extra}">${tileFace(t, red)}${lb}</span>`;
+  const su = Math.floor(t / 9), dr = sz !== 'D' && !String(extra).includes('nodr') && doraSet().has(t); return `<span data-t="${t}" class="tl ${sz} s${su} ${red ? 'red' : ''} ${dr ? 'isdora' : ''} ${extra}">${tileFace(t, red)}${lb}${dr ? '<i class="drm"></i>' : ''}</span>`;
 }
+let DSK = '', DS = new Set();
+function doraSet() { if (!G || !G.ind) return DS = new Set(); const k = G.gid + ':' + G.handNo + ':' + G.doraN; if (k === DSK) return DS; DSK = k; DS = new Set(); for (let j = 0; j < G.doraN; j++) DS.add(doraOf(tT(G.ind[2 * j]), G.n === 3)); return DS; }
 const tileT = (t, sz, extra) => tile(t * 4 + 1, sz, extra);
 function meldsHTML(S, sz) {
   return S.melds.map(m => `<span class="meld">${m.ids.map((id, j) => m.k === 'ankan' && (j === 0 || j === 3) ? tile(null, sz) : tile(id, sz, id === m.called ? 'rot' : '')).join('')}</span>`).join('')
@@ -64,10 +66,10 @@ let VIS = [];
 function renderTable() {
   const m = me(), S = G.seats[m]; VIS = visibleCounts(G, m);
   const center = `<div class="center"><div class="rl">${roundLabel(G)}</div><div class="hb">${G.honba}본장 · 공탁 ${G.sticks}</div>
-    <div class="dora">${[0, 1, 2, 3, 4].map(k => k < G.doraN ? tile(G.ind[2 * k], 'D') : tile(null, 'D')).join('')}</div><div class="rem">남은 패 <b>${G.wall.length}</b></div></div>`;
+    <div class="dora">${[0, 1, 2, 3, 4].map(k => k < G.doraN ? tile(G.ind[2 * k], 'D') : tile(null, 'D')).join('')}</div><div class="doraT"><span>도라</span>${[...doraSet()].map(x => tileT(x, 'S', 'nodr')).join('')}</div><div class="rem">남은 패 <b>${G.wall.length}</b></div></div>`;
   const myTurn = G.phase === 'discard' && G.turn === m, O = myTurn ? discardOpts(G, m) : null;
   const drawn = myTurn && S.drawn != null ? S.drawn : null, base = S.hand.filter(i => i !== drawn);
-  const threat = AS.danger && G.seats.some((X, k) => k !== m && X.riichi);
+  const threat = AS.danger && G.seats.some((X, k) => k !== m && threatOf(G, k));
   let best = new Set();
   if (AS.shanten && myTurn && !S.riichi) { const c = cnt(S.hand), fm = S.melds.length, sc = {}; [...new Set(S.hand.map(tT))].forEach(t => { c[t]--; sc[t] = shanten(c, fm); c[t]++; }); const mn = Math.min(...Object.values(sc)); Object.keys(sc).forEach(t => { if (sc[t] === mn) best.add(+t); }); if (best.size > 6) best = new Set(); }
   const one = id => { const t = tT(id);
@@ -141,7 +143,7 @@ function assistHTML() {
       return `${tileT(t, 'S')}<span>남은 ${Math.max(0, 4 - vis[t])}장 · ${st}</span>`; }).join('')}</div>`;
   }
   if (AS.yaku) { const Y = yakuHints(m); h += `<div class="yk">${Y.list.map(([n, k]) => `<span class="y${k}">${esc(n)}</span>`).join('') || '<span>노릴 역이 아직 없어요</span>'}</div>${Y.warn ? '<div class="warn">⚠ 역 없음 — 울고 나면 역이 있어야 화료할 수 있어요</div>' : ''}`; }
-  if (AS.danger && G.seats.some((X, k) => k !== m && X.riichi)) h += '<div style="font-size:11.5px;margin-top:6px;color:var(--mut)">리치 선언자 있음 · 내 패 위에 <b class="ok">안전</b> · <b class="mid">주의</b> · <b class="ng">위험</b> 표시</div>';
+  if (AS.danger && G.seats.some((X, k) => k !== m && threatOf(G, k))) h += '<div style="font-size:11.5px;margin-top:6px;color:var(--mut)">경계 대상 · ' + G.seats.map((X, k) => k !== m && threatOf(G, k) ? esc(X.name) + '(' + threatOf(G, k).why + ')' : '').filter(Boolean).join(', ') + ' · 내 패 위에 <b class="ok">안전</b> · <b class="mid">주의</b> · <b class="ng">위험</b> 표시</div>';
   return h ? `<div class="box"><h4>도움 · 내 패 분석</h4>${h}</div>` : '';
 }
 function tipText() {
@@ -169,10 +171,23 @@ function renderPanel() {
     <div class="log">${G.log.slice(-40).reverse().map(l => `<div>${esc(l.text)}</div>`).join('')}</div>`;
 }
 /* ── 모달 ── */
+
+function roomHTML() {
+  const c = UI.cfg, winds = ['東', '南', '西', '北'], seg = (k, arr) => `<div class="seg">${arr.map(([v, n]) => `<button class="${c[k] === v ? 'on' : ''}" data-cfg="${k}" data-v="${v}">${n}</button>`).join('')}</div>`;
+  const afk = c.afk ?? 20;
+  return `<div class="md" style="width:600px"><div class="k">온라인 방</div><h2>${c.rk ? '친구와 경쟁전' : '방 설정'}</h2>
+    ${c.rk ? '<p style="font-size:13.5px;margin:0 0 10px">4인 반장전 · 적도라 · 도움 기능 꺼짐으로 고정됩니다. 끝나면 참가한 사람 모두의 랭크 포인트가 순위에 따라 오르내리고, 도중에 나가면 최하위로 처리됩니다. 빈 자리는 봇(강함)이 앉습니다.</p>' : `<div class="fg"><label>인원</label>${seg('n', [[4, '4인'], [3, '3인 (산마)']])}</div>
+    <div class="fg"><label>길이</label>${seg('len', [['ton', '동풍전'], ['han', '반장전']])}</div>
+    <div class="fg"><label>적도라 (빨간 5)</label>${seg('aka', [[true, '있음'], [false, '없음']])}</div>`}
+    <div class="fg"><label>자리 · 나는 동(방장)</label>${c.seats.slice(0, c.rk ? 3 : c.n - 1).map((v, i) => `<div class="seat"><b>${winds[i + 1]}</b><span style="font-size:13px">자리 ${i + 2}</span><select data-seat="${i}">${(c.rk ? [['remote', '온라인 참가자'], ['high', '봇 · 강함']] : [['remote', '온라인 참가자'], ['low', '봇 · 약함'], ['mid', '봇 · 보통'], ['high', '봇 · 강함']]).map(([k, n]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`).join('')}</div>
+    <div class="fg"><label>대기시간 · 차례에 이 시간 동안 움직이지 않으면 자동 진행</label><div class="seg">${[[0, '끔'], [10, '10초'], [20, '20초'], [30, '30초'], [60, '60초'], [120, '120초']].map(([v, n]) => `<button class="${afk === v ? 'on' : ''}" data-afk="${v}">${n}</button>`).join('')}</div>
+      <p style="font-size:12px;color:var(--mut);margin:6px 0 0">퐁 · 치 · 론 선택은 이보다 짧게 기다립니다. 끔이면 자동 진행 없이 계속 기다립니다.</p></div>
+    <div class="foot"><button class="go sec" data-a="close">취소</button><button class="go" data-a="roomgo">방 만들기</button></div></div>`;
+}
 function renderModal() {
   let h = '';
   if (UI.modal === 'juke') h = jukeHTML(); else if (UI.modal === 'say') h = sayHTML(); else if (UI.modal === 'lines') h = linesHTML(); else if (UI.modal === 'bots') { h = botEditHTML(); if (!h) UI.modal = null; } else if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
-  else if (UI.modal === 'rank') h = rankHTML(); else if (UI.modal === 'exit') h = exitHTML(); else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
+  else if (UI.modal === 'room') h = roomHTML(); else if (UI.modal === 'rank') h = rankHTML(); else if (UI.modal === 'exit') h = exitHTML(); else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
   const ov = $('ov'); ov.innerHTML = h; ov.hidden = !h;
 }
 function payHTML(pay) { return `<div class="pay">${G.seats.map((S, i) => `<div>${esc(S.name)}<b class="${pay[i] > 0 ? 'plus' : pay[i] < 0 ? 'minus' : ''}">${pay[i] > 0 ? '+' : ''}${pay[i]}</b>${S.pts}</div>`).join('')}</div>`; }
@@ -231,20 +246,20 @@ function renderSetup() {
   st.innerHTML = `<div class="st-h"><div class="k">RIICHI MAHJONG</div><h1>리치 麻雀</h1><div class="sub">리치 마작 · 3인 / 4인 · 온라인 대국</div>${pfCardHTML()}
     <div class="note">혼자라면 봇과, 친구와 함께라면 자리를 <b>온라인 참가자</b>로 두고 시작한 뒤 오른쪽 위 <b>방 만들기</b>로 4자리 코드를 공유하세요. 친구는 아래 <b>참가하기</b>에 코드를 입력하면 됩니다.<br>초보라면 도움 기능을 켜 두세요. 게임 중에도 <b>도움</b> 버튼으로 하나씩 끄고 켤 수 있습니다.</div>
     <div class="fg" style="margin-top:26px"><label>참가하기 · 코드 + 이름</label><div class="jn"><input id="jcode" placeholder="코드 4자리" maxlength="4" value="${esc(UI.join.code)}"><input id="jname" placeholder="내 이름" value="${esc(UI.join.name || PF.d.nick)}"><button class="go sec" data-a="join" style="height:36px;font-size:15px">참가</button></div></div>
-    <div class="box rkbox"><div style="flex:1;min-width:0"><div class="k" style="margin-bottom:4px">경쟁전 · 4인 반장전 · 도움 끔</div>${rankLine()}</div><div style="display:flex;flex-direction:column;gap:6px"><button class="go" data-a="ranked" style="height:36px;font-size:15px">경쟁전 시작</button><button class="pb" data-m="rank">단계 보기</button></div></div></div>
+    <div class="box rkbox"><div style="flex:1;min-width:0"><div class="k" style="margin-bottom:4px">경쟁전 · 4인 반장전 · 도움 끔</div>${rankLine()}</div><div style="display:flex;flex-direction:column;gap:6px"><button class="go" data-a="ranked" style="height:36px;font-size:15px">경쟁전 시작</button><button class="pb" data-a="rkroom">친구와 경쟁전</button><button class="pb" data-m="rank">단계 보기</button></div></div></div>
     <div><div class="fg"><label>인원</label><div class="seg">${[4, 3].map(n => `<button class="${c.n === n ? 'on' : ''}" data-cfg="n" data-v="${n}">${n}인${n === 3 ? ' (산마)' : ''}</button>`).join('')}</div></div>
     <div class="fg"><label>길이</label><div class="seg">${[['han', '반장전 (동·남)'], ['ton', '동풍전 (동)']].map(([k, n]) => `<button class="${c.len === k ? 'on' : ''}" data-cfg="len" data-v="${k}">${n}</button>`).join('')}</div></div>
     <div class="fg"><label>적도라 (빨간 5)</label><div class="seg">${[[true, '있음'], [false, '없음']].map(([k, n]) => `<button class="${c.aka === k ? 'on' : ''}" data-cfg="aka" data-v="${k}">${n}</button>`).join('')}</div></div>
     <div class="fg"><label>자리</label><div class="seat"><b>${winds[0]}</b><span style="display:flex;align-items:center;gap:8px;font-weight:800">${avHTML(CH.me, PF.img('me', 'face'), 28)}${esc(PF.d.nick)}</span><span style="font-size:13px;color:var(--mut)">나 (이 기기)</span></div>
       ${c.seats.slice(0, c.n - 1).map((v, i) => `<div class="seat"><b>${winds[i + 1]}</b><span style="font-size:13px">자리 ${i + 2}</span><select data-seat="${i}">${[['low', '봇 · 약함'], ['mid', '봇 · 보통'], ['high', '봇 · 강함'], ['remote', '온라인 참가자']].map(([k, n]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`).join('')}</div>
     <div class="fg"><label>도움 기능 · 켜고 끄기</label><div style="display:flex;flex-wrap:wrap;gap:6px">${AS_INFO.map(([k, n]) => `<button class="pb ${AS[k] ? 'on' : ''}" data-as="${k}">${n}</button>`).join('')}</div></div>
-    <div style="display:flex;gap:10px;margin-top:18px"><button class="go" data-a="start">일반전 시작</button>${saved && !saved.over ? `<button class="go sec" data-a="resume">${saved.ranked ? '경쟁전 ' : ''}이어하기</button>` : ''}</div></div>`;
+    <div style="display:flex;gap:10px;margin-top:18px"><button class="go" data-a="start">일반전 시작</button><button class="go sec" data-a="room">온라인 방 만들기</button>${saved && !saved.over ? `<button class="go sec" data-a="resume">${saved.ranked ? '경쟁전 ' : ''}이어하기</button>` : ''}</div></div>`;
 }
 function startGame(ranked) {
   forfeitSaved(); RANK.off(); if (window.applyBots) applyBots();
-  const c = ranked ? { n: 4, len: 'han', aka: true, seats: ['high', 'high', 'high'] } : UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.slice());
+  const c = ranked ? { n: 4, len: 'han', aka: true, seats: UI.cfg.rk ? UI.cfg.seats.slice(0, 3).map(v => v === 'remote' ? 'remote' : 'high') : ['high', 'high', 'high'] } : UI.cfg, nm = PF.d.nick || '나', pool = shuffleArr(CHARS.slice());
   const players = [{ name: nm, char: 'me' }].concat(c.seats.slice(0, c.n - 1).map((v, i) => v === 'remote' ? { name: `참가자 ${i + 1}`, remote: true, char: pool[i].id } : { name: `${pool[i].n} · 봇`, bot: true, level: v, char: pool[i].id }));
-  if (!ranked && c.seats.slice(0, c.n - 1).includes('remote') && !(window.CLOUD && CLOUD.user)) { toast('온라인 참가자 자리를 쓰려면 먼저 로그인하세요'); if (window.CLOUD && CLOUD.showLogin) CLOUD.showLogin(); return; }
+  if (c.seats.slice(0, c.n - 1).includes('remote') && !(window.CLOUD && CLOUD.user)) { toast('온라인 참가자 자리를 쓰려면 먼저 로그인하세요'); if (window.CLOUD && CLOUD.showLogin) CLOUD.showLogin(); return; }
   UI.skins = {};
   G = newGame({ n: c.n, len: c.len, aka: c.aka, players }); if (ranked) { G.ranked = true; RANK.on(); } UI.modal = AS.tutor ? 'rules' : null;
   if (G.seats.some(S => S.remote) && window.CLOUD && CLOUD.user) { render(); return NET.create(); }
@@ -252,10 +267,19 @@ function startGame(ranked) {
 }
 /* 끝나지 않은 경쟁전을 두고 새 대국을 시작하면 도중 이탈로 처리 */
 function forfeitSaved() { let s = null; try { s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {} if (s && s.ranked && !s.over && (!G || G.gid !== s.gid)) { RANK.apply(s, 0, true); localStorage.removeItem(SAVE_KEY); } }
+/* ── 우클릭: 쯔모패 바로 버리기 ── */
+document.addEventListener('contextmenu', e => {
+  if (!G || G.over || UI.modal || !e.target.closest || !e.target.closest('#table, #stage, .hand, .tl')) return;
+  const S = G.seats[me()]; if (!(G.phase === 'discard' && G.turn === me() && S && S.drawn != null)) return;
+  e.preventDefault(); const el = document.querySelector('[data-d="' + S.drawn + '"]');
+  if (!el || !el.classList.contains('can')) return toast('지금은 쯔모패를 바로 버릴 수 없습니다');
+  const r = UI.riichi; UI.riichi = false; doAct({ t: 'discard', id: S.drawn, riichi: r || undefined });
+});
 /* ── 입력 ── */
 document.addEventListener('click', e => {
   const q = s => e.target.closest(s); let el;
-  if ((el = q('[data-cfg]'))) { const k = el.dataset.cfg, v = el.dataset.v; UI.cfg[k] = k === 'n' ? +v : k === 'aka' ? v === 'true' : v; UI.cfg.name = ($('myname') || {}).value || UI.cfg.name; try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} return renderSetup(); }
+  if ((el = q('[data-cfg]'))) { const k = el.dataset.cfg, v = el.dataset.v; UI.cfg[k] = k === 'n' ? +v : k === 'aka' ? v === 'true' : v; UI.cfg.name = ($('myname') || {}).value || UI.cfg.name; try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} if (UI.modal === 'room') renderModal(); return renderSetup(); }
+  if ((el = q('[data-afk]'))) { UI.cfg.afk = +el.dataset.afk; try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} return renderModal(); }
   if ((el = q('[data-as]'))) { if (G && G.ranked) return toast('경쟁전에서는 도움 기능을 쓸 수 없습니다'); AS[el.dataset.as] = !AS[el.dataset.as]; localStorage.setItem(AS_KEY, JSON.stringify(AS)); return G ? render() : renderSetup(); }
   if ((el = q('[data-color]'))) { PF.d.color = el.dataset.color; PF.save(); return pfRefresh(); }
   if ((el = q('[data-clr]'))) { PF.clearImg('me', el.dataset.clr); return pfRefresh(); }
@@ -264,7 +288,10 @@ document.addEventListener('click', e => {
   if ((el = q('[data-d]'))) { const id = +el.dataset.d; if (!el.classList.contains('can')) return; const r = UI.riichi; UI.riichi = false; return doAct({ t: 'discard', id, riichi: r || undefined }); }
   if ((el = q('[data-a]'))) { const a = el.dataset.a, m = me();
     if (a === 'start') return startGame();
-    if (a === 'ranked') { UI.modal = null; return startGame(true); }
+    if (a === 'room') { UI.cfg.rk = false; if (!(window.CLOUD && CLOUD.user)) { toast('온라인 방은 로그인 후 만들 수 있습니다'); return CLOUD.showLogin && CLOUD.showLogin(); } if (!UI.cfg.seats.slice(0, UI.cfg.n - 1).includes('remote')) UI.cfg.seats[0] = 'remote'; UI.modal = 'room'; return renderModal(); }
+    if (a === 'roomgo') { const rk = !!UI.cfg.rk; if (!UI.cfg.seats.slice(0, rk ? 3 : UI.cfg.n - 1).includes('remote')) return toast('온라인 참가자 자리를 하나 이상 두세요'); try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} UI.modal = null; renderModal(); return startGame(rk); }
+    if (a === 'ranked') { UI.cfg.rk = false; UI.modal = null; return startGame(true); }
+    if (a === 'rkroom') { if (!(window.CLOUD && CLOUD.user)) { toast('친구와 경쟁전은 로그인 후 할 수 있습니다'); return CLOUD.showLogin && CLOUD.showLogin(); } UI.cfg.rk = true; if (!UI.cfg.seats.slice(0, 3).includes('remote')) UI.cfg.seats[0] = 'remote'; UI.modal = 'room'; return renderModal(); }
     if (a === 'resume') { G = JSON.parse(localStorage.getItem(SAVE_KEY)); if (G.ranked) RANK.on(); return after(); }
     if (a === 'exitgo') { if (G && G.ranked && !G.over) { RANK.apply(G, me(), true); localStorage.removeItem(SAVE_KEY); } if (window.NET && NET.role) NET.leave(); G = null; clearTimeout(T); UI.modal = null; RANK.off(); $('ov').hidden = true; return render(); }
     if (a === 'join') { UI.join = { code: $('jcode').value.trim(), name: $('jname').value.trim() || '참가자' }; if (!/^\d{4}$/.test(UI.join.code)) return toast('코드 4자리를 입력하세요'); return NET.join(UI.join.code, UI.join.name); }
@@ -406,6 +433,6 @@ function yakuBookHTML() {
   <div class="foot"><button class="go sec" data-a="close">닫기</button></div></div>`;
 }
 
-document.addEventListener('change', e => { const el = e.target; if (!el.hasAttribute || !el.hasAttribute('data-seat')) return; UI.cfg.seats[+el.dataset.seat] = el.value; try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} renderSetup(); });
+document.addEventListener('change', e => { const el = e.target; if (!el.hasAttribute || !el.hasAttribute('data-seat')) return; UI.cfg.seats[+el.dataset.seat] = el.value; try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} renderSetup(); if (UI.modal === 'room') renderModal(); });
 
 (() => { try { const s = JSON.parse(localStorage.getItem('mj-cfg') || 'null'); if (s && Array.isArray(s.seats)) { Object.assign(UI.cfg, s); if (!G && !$('setup').hidden) renderSetup(); } } catch (e) {} })();

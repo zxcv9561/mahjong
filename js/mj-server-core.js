@@ -57,7 +57,7 @@ async function svHandle(db, uid, body) {
     const players = p.map(x => ({ name: String(x.name || '').slice(0, 10) || '참가자', char: x.char || null, bot: !!x.bot, level: ['low', 'mid', 'high'].includes(x.level) ? x.level : 'mid', remote: !x.bot }));
     let code = ''; for (let i = 0; i < 20 && !code; i++) { const c = String(1000 + Math.floor(Math.random() * 9000)); if (!(await db.codeTaken(c))) code = c; }
     if (!code) return { err: '방 코드를 만들지 못했습니다. 다시 시도하세요' };
-    const G = newGame({ n: body.n, len: body.len, aka: body.aka, players });
+    const rk = !!body.ranked; const G = newGame(rk ? { n: 4, len: 'han', aka: true, players } : { n: body.n, len: body.len, aka: body.aka, players }); if (rk) G.ranked = true;
     const afk = body.afk === 0 ? 0 : Math.max(5, Math.min(120, +body.afk || 20)) * 1000;
     G._t = now; G._net = { code, owner: uid, uids: { [mine]: uid }, skins: { [mine]: body.skin || {} }, seen: { [uid]: now }, afk };
     const g = await db.createRoom(code, uid, G); await db.notify(code, g.ver);
