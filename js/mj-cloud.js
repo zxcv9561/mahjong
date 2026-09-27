@@ -36,7 +36,7 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     const d = row.data && Object.keys(row.data).length ? row.data : null;
     if (d) { PF.d = Object.assign({ nick: row.nick, char: row.char, standPos: {}, skinUrls: {} }, d); PF.d.stats = Object.assign(PF.blank(), PF.d.stats || {}); PF.d.skinUrls = PF.d.skinUrls || {}; PF.migrateMe(); }
     else { PF.d.nick = PF.d.nick && PF.d.nick !== '나' ? PF.d.nick : row.nick; PF.d.skinUrls = PF.d.skinUrls || {}; await migrateImgs(); }
-    PF.saveLocal(); await push(); refresh(); if (window.NET && NET.resume) NET.resume(); return true;
+    PF.saveLocal(); await push(); if (window.botLoad) await botLoad(); if (window.jkLoad) jkLoad(); refresh(); if (window.NET && NET.resume) NET.resume(); return true;
   }
   async function migrateImgs() { for (const c of [{ id: 'me' }]) for (const k of ['face', 'stand']) { const u = localStorage.getItem(LOCAL_IMG(c.id, k)); if (u) await upload(c.id, k, u); } }
   async function upload(ch, kind, dataUrl) {
@@ -67,7 +67,7 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     .replace('<div class="k">내 프로필', `<div class="k">${CLOUD.user ? esc(CLOUD.user.email) + ' · 서버 저장' : '로그인 안 함 · 이 기기에 저장'} · 내 프로필`);
   document.addEventListener('click', async e => { const b = e.target.closest('[data-cloud]'); if (!b) return; e.stopPropagation();
     if (b.dataset.cloud === 'in') return CLOUD.showLogin();
-    if (!confirm('로그아웃할까요?')) return; await push(); await CLOUD.sb.auth.signOut(); CLOUD.user = null; PF.load(); refresh(); CLOUD.showLogin(); }, true);
+    if (!confirm('로그아웃할까요?')) return; await push(); await CLOUD.sb.auth.signOut(); CLOUD.user = null; CLOUD.admin = false; PF.load(); refresh(); CLOUD.showLogin(); }, true);
 
   /* 시작 */
   const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';

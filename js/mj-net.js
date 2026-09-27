@@ -31,7 +31,7 @@
   }
   function subscribe(code) {
     if (NET.ch) CLOUD.sb.removeChannel(NET.ch);
-    NET.ch = CLOUD.sb.channel('mj-room-' + code).on('broadcast', { event: 'v' }, ({ payload }) => { if (payload && payload.ver > NET.ver) call('tick'); }).on('broadcast', { event: 'say' }, ({ payload }) => { if (payload && window.sayShow) sayShow(payload.s, payload.t); }).subscribe();
+    NET.ch = CLOUD.sb.channel('mj-room-' + code).on('broadcast', { event: 'v' }, ({ payload }) => { if (payload && payload.ver > NET.ver) call('tick'); }).on('broadcast', { event: 'say' }, ({ payload }) => { if (payload && window.sayShow) sayShow(payload.s, payload.t); }).on('broadcast', { event: 'jk' }, ({ payload }) => { if (window.jkRemote) jkRemote(payload); }).on('broadcast', { event: 'jkreq' }, () => { if (window.jkBcast) jkBcast(); }).subscribe(st => { if (st === 'SUBSCRIBED') setTimeout(() => window.jkAsk && jkAsk(), 600); });
   }
   NET.create = async () => {
     if (!need() || !G) return; if (NET.role) return toast(`방 코드 ${NET.code}`);
