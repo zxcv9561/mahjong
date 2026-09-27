@@ -36,7 +36,7 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     const d = row.data && Object.keys(row.data).length ? row.data : null;
     if (d) { PF.d = Object.assign({ nick: row.nick, char: row.char, standPos: {}, skinUrls: {} }, d); PF.d.stats = Object.assign(PF.blank(), PF.d.stats || {}); PF.d.skinUrls = PF.d.skinUrls || {}; PF.migrateMe(); }
     else { PF.d.nick = PF.d.nick && PF.d.nick !== '나' ? PF.d.nick : row.nick; PF.d.skinUrls = PF.d.skinUrls || {}; await migrateImgs(); }
-    PF.saveLocal(); await push(); if (window.botLoad) await botLoad(); refresh(); if (window.NET && NET.resume) NET.resume(); return true;
+    PF.saveLocal(); await push(); if (window.botLoad) await botLoad(); if (window.jkLoad) jkLoad(); refresh(); if (window.NET && NET.resume) NET.resume(); return true;
   }
   async function migrateImgs() { for (const c of [{ id: 'me' }]) for (const k of ['face', 'stand']) { const u = localStorage.getItem(LOCAL_IMG(c.id, k)); if (u) await upload(c.id, k, u); } }
   async function upload(ch, kind, dataUrl) {
