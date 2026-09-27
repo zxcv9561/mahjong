@@ -55,7 +55,7 @@ const PF = {
           else if (x.from === m && !x.tsumo && !dealt) { st.dealin++; dealt = true; } }); } }
     if (G.over && st.lastGame !== gid && G.rank) { st.lastGame = gid; ch = true; const k = G.rank.indexOf(m), S = G.seats[m];
       st.games++; (G.n === 3 ? st.rank3 : st.rank4)[k]++; st.maxPts = Math.max(st.maxPts ?? -1e9, S.pts);
-      st.recent.unshift({ d: Date.now(), n: G.n, len: G.len, rank: k + 1, pts: S.pts, who: G.rank.map(i => G.seats[i].name) }); st.recent = st.recent.slice(0, 20); if (G.ranked && window.RANK) RANK.apply(G, m); }
+      st.recent.unshift({ d: Date.now(), n: G.n, len: G.len, rank: k + 1, pts: S.pts, who: G.rank.map(i => G.seats[i].name) }); st.recent = st.recent.slice(0, 20); if (G.ranked && typeof RANK !== 'undefined') RANK.apply(G, m); }
     if (ch) this.save();
   }
 };

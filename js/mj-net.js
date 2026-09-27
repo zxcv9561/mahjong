@@ -26,7 +26,7 @@
     if (v.ver < NET.ver && v.code === NET.code) return;
     const first = NET.code !== v.code;
     Object.assign(NET, { role: 'guest', seat: v.seat, code: v.code, ver: v.ver, owner: !!v.owner });
-    G = v.G; UI.skins = v.skins || {}; if (G && G.ranked && window.RANK) RANK.on(); localStorage.setItem(LAST, v.code);
+    G = v.G; UI.skins = v.skins || {}; if (typeof RANK !== 'undefined') { if (G && G.ranked) RANK.on(); else RANK.off(); } localStorage.setItem(LAST, v.code);
     if (first) { subscribe(v.code); $('setup').hidden = true; }
     PF.record(G, NET.seat); cutCheck(); render();
     clearTimeout(NET.tt); if (!G.over) NET.tt = setTimeout(() => call('tick'), v.next == null ? 4000 : Math.min(4000, v.next + 80));

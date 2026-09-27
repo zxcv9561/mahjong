@@ -57,7 +57,7 @@ function jukeHTML() {
     <div class="jkc"><button class="pb" data-jk="prev">이전</button><button class="go" data-jk="${JK.on ? 'pause' : 'resume'}">${JK.on ? '일시정지' : '재생'}</button><button class="pb" data-jk="next">다음</button>
       <button class="pb ${JK.shuf ? 'on' : ''}" data-jk="shuf">섞기 ${JK.shuf ? '켬' : '끔'}</button><button class="pb" data-jk="rep">반복 · ${{ all: '전체', one: '한 곡', off: '끔' }[JK.rep]}</button>
       <label class="jkv">음량<input type="range" min="0" max="1" step="0.05" value="${JK.vol}" data-jkvol></label></div>
-    ${typeof sfxHTML === 'function' ? sfxHTML() : ''}<div class="jkl">${rows || '<p style="font-size:14px;color:var(--mut)">아직 등록된 곡이 없습니다.</p>'}</div>
+    ${typeof sfxHTML === 'function' ? sfxHTML() : ''}${typeof voiceHTML === 'function' ? voiceHTML() : ''}<div class="jkl">${rows || '<p style="font-size:14px;color:var(--mut)">아직 등록된 곡이 없습니다.</p>'}</div>
     ${adm ? `<div class="up" style="margin-top:12px"><b>곡 추가</b><label class="pb">파일 올리기<input type="file" accept="audio/*" multiple data-jkup></label><span>mp3 · m4a · ogg · 한 곡 20MB까지 · 관리자 전용</span></div>` : ''}
     ${jkRoom() && !NET.owner ? `<div style="display:flex;align-items:center;gap:8px;margin-top:10px"><button class="pb ${JK.follow ? 'on' : ''}" data-jk="follow">방 음악 따라가기 ${JK.follow ? '켬' : '끔'}</button><span style="font-size:12px;color:var(--mut)">${JK.follow ? '방장이 고른 곡이 나옵니다' : '내 기기에서 따로 고릅니다'}</span></div>` : ''}
     <p style="font-size:12px;color:var(--mut);margin:10px 0 0">${jkHost() ? '온라인 방장입니다 · 내가 튼 음악이 방 참가자 모두에게 같이 나옵니다.' : jkRoom() ? '온라인 방에서는 방장이 튼 음악이 같이 나옵니다.' : '음악은 이 기기에서만 재생됩니다.'} 창을 닫아도 계속 재생됩니다.${window.CLOUD && CLOUD.user ? '' : ' 로그인하면 최신 곡 목록을 받아옵니다.'}</p>

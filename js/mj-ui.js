@@ -64,7 +64,7 @@ function sideHTML(s) {
 }
 let VIS = [];
 function renderTable() {
-  const m = me(), S = G.seats[m]; VIS = visibleCounts(G, m);
+  if (G.ranked && typeof RANK !== 'undefined') RANK.on(); const m = me(), S = G.seats[m]; VIS = visibleCounts(G, m);
   const center = `<div class="center"><div class="rl">${roundLabel(G)}</div><div class="hb">${G.honba}본장 · 공탁 ${G.sticks}</div>
     <div class="dora">${[0, 1, 2, 3, 4].map(k => k < G.doraN ? tile(G.ind[2 * k], 'D') : tile(null, 'D')).join('')}</div><div class="doraT"><span>도라</span>${[...doraSet()].map(x => tileT(x, 'S', 'nodr')).join('')}</div><div class="rem">남은 패 <b>${G.wall.length}</b></div></div>`;
   const myTurn = G.phase === 'discard' && G.turn === m, O = myTurn ? discardOpts(G, m) : null;
@@ -292,7 +292,7 @@ document.addEventListener('click', e => {
     if (a === 'roomgo') { const rk = !!UI.cfg.rk; if (!UI.cfg.seats.slice(0, rk ? 3 : UI.cfg.n - 1).includes('remote')) return toast('온라인 참가자 자리를 하나 이상 두세요'); try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} UI.modal = null; renderModal(); return startGame(rk); }
     if (a === 'ranked') { UI.cfg.rk = false; UI.modal = null; return startGame(true); }
     if (a === 'rkroom') { if (!(window.CLOUD && CLOUD.user)) { toast('친구와 경쟁전은 로그인 후 할 수 있습니다'); return CLOUD.showLogin && CLOUD.showLogin(); } UI.cfg.rk = true; if (!UI.cfg.seats.slice(0, 3).includes('remote')) UI.cfg.seats[0] = 'remote'; UI.modal = 'room'; return renderModal(); }
-    if (a === 'resume') { G = JSON.parse(localStorage.getItem(SAVE_KEY)); if (G.ranked) RANK.on(); return after(); }
+    if (a === 'resume') { G = JSON.parse(localStorage.getItem(SAVE_KEY)); RANK.off(); if (G.ranked) RANK.on(); return after(); }
     if (a === 'exitgo') { if (G && G.ranked && !G.over) { RANK.apply(G, me(), true); localStorage.removeItem(SAVE_KEY); } if (window.NET && NET.role) NET.leave(); G = null; clearTimeout(T); UI.modal = null; RANK.off(); $('ov').hidden = true; return render(); }
     if (a === 'join') { UI.join = { code: $('jcode').value.trim(), name: $('jname').value.trim() || '참가자' }; if (!/^\d{4}$/.test(UI.join.code)) return toast('코드 4자리를 입력하세요'); return NET.join(UI.join.code, UI.join.name); }
     if (a === 'close') { UI.modal = null; renderModal(); return G ? render() : renderSetup(); }
