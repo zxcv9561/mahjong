@@ -24,7 +24,7 @@
   }
   function apply(v) {
     if (v.ver < NET.ver && v.code === NET.code) return;
-    const first = NET.code !== v.code;
+    const first = !NET.ch || NET.chCode !== v.code;
     Object.assign(NET, { role: 'guest', seat: v.seat, code: v.code, ver: v.ver, owner: !!v.owner });
     G = v.G; UI.skins = v.skins || {}; if (typeof RANK !== 'undefined') { if (G && G.ranked) RANK.on(); else RANK.off(); } localStorage.setItem(LAST, v.code);
     if (first) { subscribe(v.code); $('setup').hidden = true; }
@@ -33,7 +33,7 @@
   }
   function subscribe(code) {
     if (NET.ch) CLOUD.sb.removeChannel(NET.ch);
-    NET.ch = CLOUD.sb.channel('mj-room-' + code).on('broadcast', { event: 'v' }, ({ payload }) => { if (payload && payload.ver > NET.ver) call('tick'); }).on('broadcast', { event: 'say' }, ({ payload }) => { if (payload && window.sayShow) sayShow(payload.s, payload.t); }).on('broadcast', { event: 'jk' }, ({ payload }) => { if (window.jkRemote) jkRemote(payload); }).on('broadcast', { event: 'jkreq' }, () => { if (window.jkBcast) jkBcast(); }).subscribe(st => { if (st === 'SUBSCRIBED') setTimeout(() => window.jkAsk && jkAsk(), 600); });
+    NET.chCode = code; NET.ch = CLOUD.sb.channel('mj-room-' + code).on('broadcast', { event: 'v' }, ({ payload }) => { if (payload && payload.ver > NET.ver) call('tick'); }).on('broadcast', { event: 'say' }, ({ payload }) => { if (payload && window.sayShow) sayShow(payload.s, payload.t); }).on('broadcast', { event: 'jk' }, ({ payload }) => { if (window.jkRemote) jkRemote(payload); }).on('broadcast', { event: 'jkreq' }, () => { if (window.jkBcast) jkBcast(); }).subscribe(st => { if (st === 'SUBSCRIBED') setTimeout(() => window.jkAsk && jkAsk(), 600); });
   }
   NET.create = async () => {
     if (!need() || !G) return; if (NET.role) return toast(`방 코드 ${NET.code}`);
@@ -49,7 +49,7 @@
   NET.resume = async () => { const code = localStorage.getItem(LAST); if (!code || NET.role || !CLOUD.user) return; NET.code = code; const d = await call('tick', { code }); if (d && d.G && !d.G.over) toast(`온라인 방 ${code}에 다시 들어왔습니다`); else if (!d || !d.G) NET.code = ''; };
   NET.sendAct = a => { if (NET.role) call('act', { a }); else toast('연결되지 않았습니다'); };
   NET.toBot = s => call('bot', { seat: s });
-  NET.leave = quiet => { clearTimeout(NET.tt); if (NET.ch) CLOUD.sb.removeChannel(NET.ch); Object.assign(NET, { role: null, seat: null, code: '', ch: null, ver: -1, owner: false }); localStorage.removeItem(LAST); };
+  NET.leave = quiet => { clearTimeout(NET.tt); if (NET.ch) CLOUD.sb.removeChannel(NET.ch); Object.assign(NET, { role: null, seat: null, code: '', ch: null, chCode: '', ver: -1, owner: false }); localStorage.removeItem(LAST); };
   NET.push = () => {}; NET.pushSkins = () => {};
   addEventListener('visibilitychange', () => { if (!document.hidden && NET.role) call('tick'); });
 })();

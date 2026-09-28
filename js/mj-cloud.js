@@ -35,9 +35,17 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     CLOUD.user = user; localStorage.removeItem('mj-offline');
     const d = row.data && Object.keys(row.data).length ? row.data : null;
     if (d) { PF.d = Object.assign({ nick: row.nick, char: row.char, standPos: {}, skinUrls: {} }, d); PF.d.stats = Object.assign(PF.blank(), PF.d.stats || {}); PF.d.skinUrls = PF.d.skinUrls || {}; PF.migrateMe(); }
-    else { PF.d.nick = PF.d.nick && PF.d.nick !== '나' ? PF.d.nick : row.nick; PF.d.skinUrls = PF.d.skinUrls || {}; await migrateImgs(); }
+    else { if (hasLocal() && !(await askImport())) wipeLocal(); PF.d.nick = PF.d.nick && PF.d.nick !== '나' ? PF.d.nick : row.nick; PF.d.skinUrls = PF.d.skinUrls || {}; await migrateImgs(); }
     PF.saveLocal(); await push(); if (window.botLoad) await botLoad(); if (window.jkLoad) jkLoad(); refresh(); if (window.NET && NET.resume) NET.resume(); return true;
   }
+
+  /* 이 기기 프로필 비우기 (새로 시작 · 로그아웃) */
+  function wipeLocal() { try { localStorage.removeItem(PF_KEY); ['face', 'stand'].forEach(k => localStorage.removeItem(LOCAL_IMG('me', k))); localStorage.removeItem('mj-lines-v1'); } catch (e) {} PF.load(); PF.d.skinUrls = {}; }
+  const hasLocal = () => (PF.d.stats && (PF.d.stats.games > 0 || PF.d.stats.hands > 0)) || (PF.d.nick && PF.d.nick !== '나') || !!localStorage.getItem(LOCAL_IMG('me', 'face')) || !!localStorage.getItem(LOCAL_IMG('me', 'stand'));
+  function askImport() { return new Promise(res => { const d = document.createElement('div'); d.className = 'ov'; d.style.zIndex = 90;
+    d.innerHTML = `<div class="md" style="max-width:520px"><div class="k">처음 로그인</div><h2>이 기기의 프로필을 가져올까요?</h2><p style="font-size:14px;line-height:1.6">이 브라우저에 로그인 전 프로필이 있습니다 · 닉네임 <b>${esc(PF.d.nick || '나')}</b> · 대국 ${(PF.d.stats && PF.d.stats.games) || 0}판.<br>내 것이면 <b>가져오기</b>, 다른 사람이 쓰던 기기라면 <b>새로 시작</b>을 누르세요. 새로 시작하면 이 기기의 로그인 전 프로필은 지워집니다.</p><div class="foot" style="display:flex;gap:8px"><button class="go sec" data-imp="0">새로 시작</button><button class="go" data-imp="1">가져오기</button></div></div>`;
+    d.addEventListener('click', e => { const b = e.target.closest('[data-imp]'); if (!b) return; d.remove(); res(b.dataset.imp === '1'); });
+    ($('stage') || document.body).appendChild(d); }); }
   async function migrateImgs() { for (const c of [{ id: 'me' }]) for (const k of ['face', 'stand']) { const u = localStorage.getItem(LOCAL_IMG(c.id, k)); if (u) await upload(c.id, k, u); } }
   async function upload(ch, kind, dataUrl) {
     const blob = await (await fetch(dataUrl)).blob(), ext = blob.type.split('/')[1] || 'webp', path = `${CLOUD.user.id}/${ch}-${kind}.${ext}`;
@@ -67,7 +75,7 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     .replace('<div class="k">내 프로필', `<div class="k">${CLOUD.user ? esc(CLOUD.user.email) + ' · 서버 저장' : '로그인 안 함 · 이 기기에 저장'} · 내 프로필`);
   document.addEventListener('click', async e => { const b = e.target.closest('[data-cloud]'); if (!b) return; e.stopPropagation();
     if (b.dataset.cloud === 'in') return CLOUD.showLogin();
-    if (!confirm('로그아웃할까요?')) return; await push(); await CLOUD.sb.auth.signOut(); CLOUD.user = null; CLOUD.admin = false; PF.load(); refresh(); CLOUD.showLogin(); }, true);
+    if (!confirm('로그아웃할까요?')) return; await push(); await CLOUD.sb.auth.signOut(); CLOUD.user = null; CLOUD.admin = false; wipeLocal(); refresh(); CLOUD.showLogin(); }, true);
 
   /* 시작 */
   const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';

@@ -177,3 +177,37 @@ button{font-family:inherit;cursor:pointer;color:var(--ink)}select,input{color:va
 
 .tl.isdora{box-shadow:0 0 0 2px #E0B028,0 2px 0 rgba(0,0,0,.25)}.tl .drm{position:absolute;left:2px;top:2px;width:0;height:0;border-left:9px solid #E0B028;border-bottom:9px solid transparent;pointer-events:none;z-index:2}.tl.S .drm,.tl.M .drm{border-left-width:6px;border-bottom-width:6px;left:1px;top:1px}.tl{position:relative}
 .center .doraT{display:flex;align-items:center;justify-content:center;gap:2px;margin:1px 0 -3px;transform:scale(.82);transform-origin:center top;height:26px;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#E0B028}.center .doraT span{margin-right:3px}
+
+#tut{position:absolute;inset:0;z-index:45;background:var(--paper);display:grid;grid-template-columns:290px 1fr}
+#tut .k{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--mut);font-weight:700}
+.tu-side{background:var(--paper2);border-right:1px solid var(--edge);padding:26px 18px 20px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.tu-side h1{font-family:var(--disp);font-size:30px;margin:0 0 4px;letter-spacing:.02em}
+.tu-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.tu-li{display:flex;align-items:center;gap:9px;border:1px solid transparent;background:none;text-align:left;padding:7px 9px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;font-family:var(--body)}
+.tu-li .n{font-family:var(--mono);font-size:11px;color:var(--faint);width:18px}
+.tu-li .ck{margin-left:auto;font-size:10.5px;color:var(--green);border:1px solid var(--green);padding:1px 5px}
+.tu-li:hover{border-color:var(--edge);background:var(--paper)}
+.tu-li.on{background:var(--ink);color:var(--paper)}.tu-li.on .n{color:var(--paper)}
+.tu-main{padding:34px 48px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;min-height:0}
+.tu-main h2{font-family:var(--disp);font-size:40px;margin:0;letter-spacing:.02em}
+.tu-main p{font-size:17px;line-height:1.65;margin:0;max-width:820px;text-wrap:pretty}
+.tu-dots{display:flex;gap:6px}.tu-dots i{width:26px;height:4px;background:var(--edge)}.tu-dots i.d{background:var(--mut)}.tu-dots i.c{background:var(--ink)}
+.tu-h{display:flex;flex-direction:column;gap:6px;padding:16px 18px;background:#1f5a3a;align-self:flex-start;max-width:100%}
+.tu-h .tu-cap{color:#dfe9e1}
+.tu-row{display:flex;gap:3px;flex-wrap:wrap;align-items:flex-end}
+.tu-cap{font-size:12.5px;font-weight:700;color:var(--mut)}
+.tu-p{cursor:pointer;display:inline-block;transition:transform .08s}.tu-p:hover{transform:translateY(-6px)}.tu-p.sel{transform:translateY(-10px)}
+.tu-q{display:flex;gap:8px;flex-wrap:wrap}.tu-q .pb{height:40px;font-size:15px;padding:0 16px}
+.tu-q .pb.ok{background:var(--green);border-color:var(--green);color:#fff}.tu-q .pb.ng{background:var(--red);border-color:var(--red);color:#fff}
+.tu-fb{font-size:15.5px;line-height:1.6;padding:10px 14px;border:1px solid var(--ink);background:#fff;max-width:820px}
+.tu-fb.ok b{color:var(--green)}.tu-fb.ng b{color:var(--red)}.tu-fb b{margin-right:6px}
+.tu-btns{display:flex;gap:10px;margin-top:auto;padding-top:8px}
+.tutbig{width:100%;height:58px;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:12px}.tutbig small{font-family:var(--body);font-size:13px;font-weight:500;opacity:.8;letter-spacing:0}
+.tu-h .tl .lb{color:#dfe9e1}.tu-h{padding-bottom:22px}
+#coach{position:absolute;left:170px;top:8px;width:560px;z-index:55;background:var(--ink);color:var(--paper);padding:12px 16px 12px;box-shadow:0 6px 0 rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px}
+#coach .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--yellow);font-weight:700}
+#coach p{margin:0;font-size:15.5px;line-height:1.6;text-wrap:pretty}#coach p b{color:var(--yellow)}
+#coach .cb-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}#coach .pb.on{background:var(--yellow);border-color:var(--yellow)}
+#coach .cb-x{align-self:flex-end;background:none;border:0;color:var(--faint);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0}
+#tut .go{white-space:nowrap}.tu-li span{white-space:nowrap}.tu-li span:nth-child(2){overflow:hidden;text-overflow:ellipsis}.tu-li span:nth-child(2){flex:1;min-width:0}.tu-li .ck{flex:none}.tu-cap{white-space:nowrap}
+#setup .go{white-space:nowrap}
