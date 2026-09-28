@@ -56,9 +56,9 @@ function prCoach() {
   if (!el) { el = document.createElement('div'); el.id = 'coach'; $('stage').appendChild(el); }
   const P = PRACTICE[G.tut.sc], st = prStep(), k = `연습 대국 ${G.tut.sc + 1} / ${PRACTICE.length} · ${P.t}`;
   let body;
-  if (prFinished()) { tutMark('g' + G.tut.sc); body = `<p>${P.end}</p><div class="cb-b"><button class="pb" data-pr="again">다시 하기</button>${G.tut.sc < PRACTICE.length - 1 ? '<button class="pb on" data-pr="next">다음 연습 대국</button>' : '<button class="pb on" data-pr="coach">코칭 실전으로</button>'}<button class="pb" data-pr="back">튜토리얼로</button></div>`; }
-  else if (st) { const ready = !st.ready || st.ready(G), myTurn = waitingSeats(G).includes(0); body = `<p>${ready ? (st.readySay || st.say) : st.say}</p>`;
-    if (st.pre && !myTurn) body = `<p>${st.pre}</p>`; }
+  if (prFinished()) { tutMark('g' + G.tut.sc); body = `<p>${glLink(P.end)}</p><div class="cb-b"><button class="pb" data-pr="again">다시 하기</button>${G.tut.sc < PRACTICE.length - 1 ? '<button class="pb on" data-pr="next">다음 연습 대국</button>' : '<button class="pb on" data-pr="coach">코칭 실전으로</button>'}<button class="pb" data-pr="back">튜토리얼로</button></div>`; }
+  else if (st) { const ready = !st.ready || st.ready(G), myTurn = waitingSeats(G).includes(0); body = `<p>${glLink(ready ? (st.readySay || st.say) : st.say)}</p>`;
+    if (st.pre && !myTurn) body = `<p>${glLink(st.pre)}</p>`; }
   else body = '<p>상대 차례를 기다리세요.</p>';
   el.innerHTML = `<div class="k">${k}</div>${body}${prFinished() ? '' : '<button class="cb-x" data-pr="back">연습 그만두기</button>'}`;
 }

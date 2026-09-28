@@ -28,6 +28,26 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
     el.querySelector('#lgO').onclick = () => { localStorage.setItem('mj-offline', '1'); el.remove(); refresh(); };
   };
 
+
+  /* 비밀번호 바꾸기 (로그인한 본인 · 현재 비밀번호 확인 후 변경) */
+  CLOUD.showPw = () => {
+    let el = document.getElementById('login'); if (!el) { el = document.createElement('div'); el.id = 'login'; document.body.appendChild(el); }
+    el.innerHTML = `<form class="lg"><h2>비밀번호 바꾸기</h2><div class="s">${esc(CLOUD.user.email || '')}</div>
+      <input id="pwC" type="password" autocomplete="current-password" placeholder="현재 비밀번호" required><input id="pwN" type="password" autocomplete="new-password" placeholder="새 비밀번호 (6자 이상)" minlength="6" required><input id="pwN2" type="password" autocomplete="new-password" placeholder="새 비밀번호 확인" minlength="6" required>
+      <div class="er" id="pwR"></div><button type="submit">바꾸기</button><button type="button" class="sub" id="pwX">취소</button></form>`;
+    const v = id => el.querySelector(id).value, r = el.querySelector('#pwR');
+    el.querySelector('#pwX').onclick = () => el.remove();
+    el.querySelector('form').onsubmit = async e => { e.preventDefault();
+      if (v('#pwN') !== v('#pwN2')) { r.textContent = '새 비밀번호가 서로 다릅니다'; return; }
+      if (v('#pwN') === v('#pwC')) { r.textContent = '현재 비밀번호와 다른 비밀번호를 입력하세요'; return; }
+      r.textContent = '확인 중…';
+      const { error: e1 } = await CLOUD.sb.auth.signInWithPassword({ email: CLOUD.user.email, password: v('#pwC') });
+      if (e1) { r.textContent = '현재 비밀번호가 맞지 않습니다'; return; }
+      const { error: e2 } = await CLOUD.sb.auth.updateUser({ password: v('#pwN') });
+      if (e2) { r.textContent = /weak|short|least/i.test(e2.message) ? '새 비밀번호가 너무 짧거나 쉽습니다' : e2.message; return; }
+      el.remove(); if (typeof toast === 'function') toast('비밀번호를 바꿨습니다'); };
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-cloud="pw"]'); if (!b || !CLOUD.user) return; e.stopPropagation(); CLOUD.showPw(); }, true);
   async function afterLogin() {
     const { data: { user } } = await CLOUD.sb.auth.getUser(); if (!user) return false;
     const { data: row, error } = await CLOUD.sb.rpc('ensure_profile');
@@ -71,7 +91,7 @@ const CLOUD = window.CLOUD = { sb: null, user: null, ready: false, t: null };
 
   /* 프로필 카드에 계정 줄 추가 */
   const _card = pfCardHTML;
-  pfCardHTML = () => _card().replace('<button class="pb" data-m="yakubook">족보</button>', `<button class="pb" data-m="yakubook">족보</button>${CLOUD.user ? '<button class="pb" data-cloud="out">로그아웃</button>' : '<button class="pb" data-cloud="in">로그인</button>'}`)
+  pfCardHTML = () => _card().replace('<button class="pb" data-m="yakubook">족보</button>', `<button class="pb" data-m="yakubook">족보</button>${CLOUD.user ? '<button class="pb" data-cloud="pw">비밀번호</button><button class="pb" data-cloud="out">로그아웃</button>' : '<button class="pb" data-cloud="in">로그인</button>'}`)
     .replace('<div class="k">내 프로필', `<div class="k">${CLOUD.user ? esc(CLOUD.user.email) + ' · 서버 저장' : '로그인 안 함 · 이 기기에 저장'} · 내 프로필`);
   document.addEventListener('click', async e => { const b = e.target.closest('[data-cloud]'); if (!b) return; e.stopPropagation();
     if (b.dataset.cloud === 'in') return CLOUD.showLogin();
