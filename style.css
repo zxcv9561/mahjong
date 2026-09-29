@@ -107,7 +107,7 @@ button{font-family:inherit;cursor:pointer;color:var(--ink)}select,input{color:va
 .jn{display:flex;gap:6px;margin-top:8px}.jn input{flex:1;min-width:0}
 .toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--red);color:#fff;padding:8px 16px;font-weight:800;font-size:14px;z-index:40}
 #portrait{display:none;position:fixed;inset:0;background:var(--ink);color:var(--paper);z-index:99;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:800;padding:30px;line-height:1.6}
-@media (orientation:portrait) and (max-width:900px){#portrait{display:flex}}
+body.need-rot #portrait,body.need-open #portrait{display:flex}body.need-open #portrait .rot{display:none}body:not(.need-open) #portrait .opn{display:none}
 
 #tip{position:absolute;transform:translateX(-50%);background:var(--ink);color:var(--paper);font-size:12px;padding:4px 9px;pointer-events:none;z-index:80;white-space:nowrap}#tip[hidden]{display:none}#tip b{color:var(--yellow)}
 .tl .lb{position:absolute;left:-4px;right:-4px;bottom:-15px;text-align:center;font-size:10px;font-weight:700;color:var(--mut);white-space:nowrap}
@@ -223,3 +223,19 @@ button{font-family:inherit;cursor:pointer;color:var(--ink)}select,input{color:va
 #gloss .gl-i b{font-size:15px}#gloss .gl-i.on{background:var(--yellow)}
 .aibox .aig{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr) minmax(0,1.1fr) 64px auto;gap:6px}.aibox .aig input,.aibox .aig select{height:34px;border:1px solid var(--edge);background:#fff;padding:0 8px;font:inherit;font-size:13px;min-width:0}.aibox .aist{font-size:12.5px;color:var(--mut);margin-top:4px}
 .aibox .aitg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.aibox .aitg span{font-size:12.5px;color:var(--mut)}.aibox .aitg .pb.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}.aibox .aig{margin-top:6px}.aibox .aig2{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12.5px}.aibox .aig2 label{color:var(--mut);margin:0}.aibox .aig2 select{height:32px;border:1px solid var(--edge);background:#fff;padding:0 8px;font:inherit;font-size:13px}
+#table{width:calc(900px + var(--ex,0px));height:100%}#panel{left:calc(903px + var(--ex,0px));height:100%}
+#table>*:not(#hand):not(#acts){translate:calc(var(--ex,0px) / 2) calc(var(--ey,0px) / 2)}
+#hand{zoom:var(--hz,1)}#acts{zoom:var(--az,1);bottom:calc(var(--ab,112px) / var(--az,1))}
+.cut .band{translate:0 calc(var(--ey,0px) / 2)}.cut .who,.cut .word,.cut .nm{translate:calc(var(--ex,0px) / 2) calc(var(--ey,0px) / 2)}
+.vpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.vpc{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border:1.5px solid var(--ink);background:#fff;cursor:pointer;text-align:left;font:inherit}
+.vpc b{font-size:15px}.vpc span{font-size:12px;color:var(--mut)}.vpc em{position:absolute;right:8px;top:8px;font-style:normal;font-size:10.5px;font-weight:800;background:var(--ink);color:var(--paper);padding:1px 6px}.vpc.on{background:var(--yellow)}
+.vpbar{display:flex;align-items:center;gap:10px;margin:10px 0 4px;font-size:13px;flex-wrap:wrap}.vpbar label{display:flex;align-items:center;gap:6px}
+.vpadm{margin-top:12px;border-top:2px solid var(--ink);padding-top:10px}.vph{display:flex;align-items:center;gap:10px}.vph select,.vpmeta .pfin{height:34px;border:1px solid var(--edge);background:#fff;padding:0 8px;font:inherit;font-size:13.5px}
+.vpmeta{display:flex;gap:8px;margin:10px 0}.vpmeta .pfin{flex:1}
+.vpbots{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12.5px;color:var(--mut)}.vpbots .pb.on{background:var(--ink);color:var(--paper)}
+.vpadm h4{margin:14px 0 4px;font-size:12px;letter-spacing:.1em;color:var(--mut)}
+.vpr{display:grid;grid-template-columns:130px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--edge)}
+.vpr em{font-style:normal;font-weight:800;font-size:13px}.vpr .pfin{height:32px;font-size:13px;width:100%}
+.vpf{display:flex;gap:4px;align-items:center;flex-wrap:wrap}.vpf .pb{position:relative;overflow:hidden}.vpf input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.vpa{display:inline-flex;border:1px solid var(--ink)}.vpa button{border:0;background:#fff;font:inherit;font-size:12px;padding:3px 6px;cursor:pointer}.vpa button+button{border-left:1px solid var(--edge);color:var(--red)}

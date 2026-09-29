@@ -73,7 +73,7 @@ function standHTML(ch, img, cls = '', pos) {
   return img ? `<div class="stand img ${cls}"><img src="${img}" alt="" draggable="false" style="${posStyle(pos)}"></div>`
     : `<div class="stand ph ${cls}" style="background-color:${ch.c};color:${ch.fg || '#fff'}"><b>${ch.h}</b><span>${ch.n}</span><em>스탠딩 이미지 없음</em></div>`;
 }
-const mySkin = () => ({ face: PF.img('me', 'face'), stand: PF.img('me', 'stand'), pos: PF.standPos('me'), color: PF.d.color || null });
+const mySkin = () => ({ face: PF.img('me', 'face'), stand: PF.img('me', 'stand'), pos: PF.standPos('me'), color: PF.d.color || null, voice: PF.d.voice || '' });
 function charOf(s) { const S = G.seats[s]; if (S.char === 'me') { const mine = isGuest() ? s === NET.seat : s === me(); return mine ? CH.me : meChar(S.name, ((UI.skins || {})[s] || {}).color); } return CH[S.char] || CHARS[s % CHARS.length]; }
 function skinOf(s) { const mine = isGuest() ? s === NET.seat : s === me(); return mine ? mySkin() : (UI.skins || {})[s] || {}; }
 const avatar = (s, px) => avHTML(charOf(s), skinOf(s).face, px);
@@ -85,7 +85,7 @@ function pfCardHTML() {
     <div class="ms"><div>대국<b>${s.games}</b></div><div>평균 순위<b>${avgRank(r)}</b></div><div>화료율<b>${pct(s.wins, s.hands)}</b></div><div>최고 화료<b>${s.best ? esc(s.best.short) : '–'}</b></div></div>
     <div style="display:flex;flex-wrap:wrap;gap:6px"><button class="pb" data-m="profile">프로필 · 스킨</button><button class="pb" data-m="stats">전적 보기</button><button class="pb" data-m="rank">랭크</button><button class="pb" data-m="yakubook">족보</button><button class="pb" data-m="juke">음악</button>${window.CLOUD && CLOUD.admin ? '<button class="pb" data-m="bots">봇 편집</button>' : ''}</div></div></div>`;
 }
-const pfTabs = on => `<div class="seg" style="width:520px;margin:10px 0 14px">${[['profile', '프로필 · 스킨'], ['lines', '대사']].concat(window.CLOUD && CLOUD.admin ? [['bots', '봇 편집']] : []).concat([['stats', '전적']]).map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
+const pfTabs = on => `<div class="seg" style="width:520px;margin:10px 0 14px">${[['profile', '프로필 · 스킨'], ['lines', '대사'], ['voice', '보이스팩']].concat(window.CLOUD && CLOUD.admin ? [['bots', '봇 편집']] : []).concat([['stats', '전적']]).map(([k, n]) => `<button class="${on === k ? 'on' : ''}" data-m="${k}">${n}</button>`).join('')}</div>`;
 function profileHTML() {
   const ch = CH[PF.d.char], face = PF.img(ch.id, 'face'), st = PF.img(ch.id, 'stand');
   return `<div class="md pf"><div class="k">내 프로필</div>${pfTabs('profile')}<div class="pfg">${standHTML(ch, st, '', PF.standPos(ch.id))}<div style="min-width:0">

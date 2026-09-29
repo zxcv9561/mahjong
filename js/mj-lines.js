@@ -46,12 +46,12 @@ skinOf = function (s) { const S = G && G.seats[s]; if (S && S.bot && S.char && C
 function sayShow(s, text) {
   if (!G || !text || s == null) return; const plate = $('table').querySelectorAll('.plate')[s], st = $('stage'); if (!plate) return;
   document.querySelectorAll(`.say[data-s="${s}"]`).forEach(x => x.remove());
-  const sr = st.getBoundingClientRect(), r = plate.getBoundingClientRect(), sc = sr.width / 1280;
+  const sr = st.getBoundingClientRect(), r = plate.getBoundingClientRect(), sc = sr.width / window.STW;
   const d = document.createElement('div'); d.className = 'say'; d.dataset.s = s;
   d.innerHTML = `<span class="who">${avatar(s, 20)}<b>${esc(G.seats[s].name)}</b></span><span class="tx">${esc(text)}</span>`;
   st.appendChild(d);
   const cx = (r.left + r.width / 2 - sr.left) / sc, top = (r.top - sr.top) / sc, w = d.offsetWidth, h = d.offsetHeight;
-  d.style.left = Math.max(8, Math.min(1272 - w, cx - w / 2)) + 'px'; d.style.top = Math.max(8, top - h - 12) + 'px';
+  d.style.left = Math.max(8, Math.min(window.STW - 8 - w, cx - w / 2)) + 'px'; d.style.top = Math.max(8, top - h - 12) + 'px';
   setTimeout(() => d.classList.add('out'), 2600); setTimeout(() => d.remove(), 3000);
 }
 window.sayShow = sayShow;
@@ -66,8 +66,8 @@ function botTalk(P, snap) {
 let SAY_T = 0;
 function saySend(i) {
   const t = myLines()[i]; if (!t || !G) return; if (Date.now() - SAY_T < 2500) return toast('잠시 후 다시 말할 수 있습니다'); SAY_T = Date.now();
-  const s = me(); sayShow(s, t);
-  if (window.NET && NET.ch) try { NET.ch.send({ type: 'broadcast', event: 'say', payload: { s, t } }); } catch (e) {}
+  const s = me(); sayShow(s, t); if (window.vpPlay) vpPlay(s, 'line' + (i + 1), { noBubble: true });
+  if (window.NET && NET.ch) try { NET.ch.send({ type: 'broadcast', event: 'say', payload: { s, t, i } }); } catch (e) {}
 }
 
 /* ── 모달 ── */

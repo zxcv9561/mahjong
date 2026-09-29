@@ -1,4 +1,4 @@
-/* MAHJONG — 화면 (데스크톱 · 모바일 가로 공용 · 1280×720 무대를 화면에 맞춰 확대/축소) */
+/* MAHJONG — 화면 (데스크톱 · 모바일 가로 공용 · 기본 1280×720 무대 · 화면 비율에 따라 폭 1280~1640 · 높이 720~1000) */
 let G = null, T = null;
 const UI = { riichi: false, modal: null, cfg: { n: 4, len: 'han', aka: true, name: '나', seats: ['mid', 'mid', 'mid'] }, join: { code: '', name: '' }, skins: {} };
 const AS_KEY = 'seed-mj-assist-v1', SAVE_KEY = 'seed-mj-v1';
@@ -11,10 +11,22 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const isGuest = () => window.NET && NET.role === 'guest';
 function me() { if (isGuest()) return NET.seat; if (!G) return 0; const i = G.seats.findIndex(S => !S.bot && !S.remote); return i < 0 ? 0 : i; }
+window.STW = 1280; window.STH = 720; const UISZ = { v: +(localStorage.getItem('mj-uisz') || 1) };
+/* 화면 비율에 맞춰 무대 크기 바꾸기 · 긴 폰(폴드 커버 · 플립 등)은 폭을, 태블릿 · 폴드 안쪽 화면은 높이를 늘림 */
 function fit() { const vv = window.visualViewport, w = vv ? vv.width : innerWidth, h = vv ? vv.height : innerHeight, pr = document.getElementById('sa-probe') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'sa-probe' })), cs = getComputedStyle(pr), inset = k => parseFloat(cs[{ '--st': 'paddingTop', '--sb': 'paddingBottom', '--sl': 'paddingLeft', '--sr': 'paddingRight' }[k]]) || 0;
-  const mob = matchMedia('(pointer: coarse)').matches, pad = mob ? 10 : 0, aw = w - inset('--sl') - inset('--sr') - pad * 2, ah = h - inset('--st') - inset('--sb') - pad * 2;
-  const s = Math.min(aw / 1280, ah / 720), cx = inset('--sl') + pad + aw / 2, cy = inset('--st') + pad + ah / 2;
-  const st = $('stage'); st.style.left = cx + 'px'; st.style.top = cy + 'px'; st.style.transform = `translate(-50%,-50%) scale(${s})`; }
+  const mob = matchMedia('(pointer: coarse)').matches, pad = mob ? 10 : 0, aw = w - inset('--sl') - inset('--sr') - pad * 2, ah = h - inset('--st') - inset('--sb') - pad * 2, ar = aw / Math.max(1, ah);
+  const small = mob && Math.max(w, h) < 560, rot = !small && h > w * 1.35 && w < 900;
+  document.body.classList.toggle('need-rot', rot); document.body.classList.toggle('need-open', small);
+  let W = 1280, H = 720; if (ar >= 16 / 9) W = Math.round(Math.min(1640, 720 * ar)); else H = Math.round(Math.min(1000, 1280 / ar));
+  const s = Math.min(aw / W, ah / H), cx = inset('--sl') + pad + aw / 2, cy = inset('--st') + pad + ah / 2, tw = 900 + W - 1280;
+  let hz = (1 + (H - 720) / 320) * UISZ.v * (mob && s < 0.7 ? 1.1 : 1); hz = Math.max(0.85, Math.min(hz, tw / 900, 1.35));
+  const az = Math.max(0.85, Math.min(1.4, (mob && s < 0.75 ? 1.25 : 1) * UISZ.v));
+  window.STW = W; window.STH = H;
+  const st = $('stage'); st.style.width = W + 'px'; st.style.height = H + 'px';
+  st.style.setProperty('--ex', (W - 1280) + 'px'); st.style.setProperty('--ey', (H - 720) + 'px'); st.style.setProperty('--hz', hz.toFixed(3)); st.style.setProperty('--az', az.toFixed(3)); st.style.setProperty('--ab', Math.round(102 * hz + 10) + 'px');
+  st.style.left = cx + 'px'; st.style.top = cy + 'px'; st.style.transform = `translate(-50%,-50%) scale(${s})`; }
+function uiSizeHTML() { return `<div class="tg"><div><b>화면 크기</b><p>손패와 버튼 크기. 화면 비율에 여유가 있을 때 더 커집니다 · 이 기기에만 저장</p></div><div class="seg" style="width:auto">${[[0.9, '작게'], [1, '보통'], [1.15, '크게'], [1.3, '아주 크게']].map(([v, n]) => `<button class="${UISZ.v === v ? 'on' : ''}" data-uisz="${v}">${n}</button>`).join('')}</div></div>`; }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-uisz]'); if (!b) return; UISZ.v = +b.dataset.uisz; localStorage.setItem('mj-uisz', UISZ.v); fit(); if (typeof renderModal === 'function') renderModal(); });
 function toast(m) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; $('stage').appendChild(d); setTimeout(() => d.remove(), 1800); }
 function save() { if (isGuest() || !G) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch (e) {} }
 
@@ -186,7 +198,7 @@ function roomHTML() {
 }
 function renderModal() {
   let h = '';
-  if (UI.modal === 'juke') h = jukeHTML(); else if (UI.modal === 'say') h = sayHTML(); else if (UI.modal === 'lines') h = linesHTML(); else if (UI.modal === 'bots') { h = botEditHTML(); if (!h) UI.modal = null; } else if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
+  if (UI.modal === 'juke') h = jukeHTML(); else if (UI.modal === 'say') h = sayHTML(); else if (UI.modal === 'lines') h = linesHTML(); else if (UI.modal === 'voice') h = voicePackHTML(); else if (UI.modal === 'bots') { h = botEditHTML(); if (!h) UI.modal = null; } else if (UI.modal === 'rules') h = rulesHTML(); else if (UI.modal === 'yakubook') h = yakuBookHTML(); else if (UI.modal === 'assist') h = assistSetHTML(); else if (UI.modal === 'profile') h = profileHTML(); else if (UI.modal === 'stats') h = statsHTML();
   else if (UI.modal === 'room') h = roomHTML(); else if (UI.modal === 'rank') h = rankHTML(); else if (UI.modal === 'exit') h = exitHTML(); else if (G && G.phase === 'end') h = resultHTML(); else if (G && G.over) h = overHTML();
   const ov = $('ov'); ov.innerHTML = h; ov.hidden = !h;
 }
@@ -223,7 +235,7 @@ function overHTML() {
     ${rankResHTML()}<p style="font-size:12px;color:var(--mut)">이번 대국 결과가 내 전적에 기록되었습니다.</p><div class="foot"><button class="go sec" data-m="stats">내 전적</button><button class="go" data-a="again">새 게임</button></div></div></div>`;
 }
 function assistSetHTML() {
-  return `<div class="md" style="width:560px"><div class="k">설정</div><h2>초보자 도움 기능</h2>${AS_INFO.map(([k, n, d]) => `<div class="tg"><div><b>${n}</b><p>${d}</p></div><button class="sw ${AS[k] ? 'on' : ''}" data-as="${k}"></button></div>`).join('')}
+  return `<div class="md" style="width:560px"><div class="k">설정</div><h2>초보자 도움 기능</h2>${uiSizeHTML()}${AS_INFO.map(([k, n, d]) => `<div class="tg"><div><b>${n}</b><p>${d}</p></div><button class="sw ${AS[k] ? 'on' : ''}" data-as="${k}"></button></div>`).join('')}
     <div class="foot"><button class="go sec" data-a="close">닫기</button></div></div>`;
 }
 function rulesHTML() {
@@ -309,7 +321,7 @@ addEventListener('resize', fit); addEventListener('orientationchange', () => set
 fit(); render();
 
 document.addEventListener('mouseover', e => { const tp = $('tip'); if (!tp) return; const el = e.target.closest && e.target.closest('.tl[data-t]');
-  if (!el || !G || !AS.remain) { tp.hidden = true; return; } const t = +el.dataset.t, n = Math.max(0, 4 - visibleCounts(G, me())[t]), sr = $('stage').getBoundingClientRect(), r = el.getBoundingClientRect(), sc = sr.width / 1280;
+  if (!el || !G || !AS.remain) { tp.hidden = true; return; } const t = +el.dataset.t, n = Math.max(0, 4 - visibleCounts(G, me())[t]), sr = $('stage').getBoundingClientRect(), r = el.getBoundingClientRect(), sc = sr.width / window.STW;
   tp.innerHTML = `${tName(t)} · 남은 <b>${n}</b>장`; tp.style.left = (r.left + r.width / 2 - sr.left) / sc + 'px'; tp.style.top = (r.top - sr.top) / sc - 28 + 'px'; tp.hidden = false; });
 
 function pfRefresh() { renderModal(); if (!G) renderSetup(); else render(); }

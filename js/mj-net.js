@@ -29,11 +29,11 @@
     G = v.G; UI.skins = v.skins || {}; if (typeof RANK !== 'undefined') { if (G && G.ranked) RANK.on(); else RANK.off(); } localStorage.setItem(LAST, v.code);
     if (first) { subscribe(v.code); $('setup').hidden = true; }
     PF.record(G, NET.seat); cutCheck(); render();
-    clearTimeout(NET.tt); if (!G.over) NET.tt = setTimeout(() => call('tick'), v.next == null ? 4000 : Math.min(4000, v.next + 80));
+    NET.dl = v.next == null ? 0 : Date.now() + v.next; clearTimeout(NET.tt); if (!G.over) NET.tt = setTimeout(() => call('tick'), v.next == null ? 4000 : Math.min(4000, v.next + 80));
   }
   function subscribe(code) {
     if (NET.ch) CLOUD.sb.removeChannel(NET.ch);
-    NET.chCode = code; NET.ch = CLOUD.sb.channel('mj-room-' + code).on('broadcast', { event: 'v' }, ({ payload }) => { if (payload && payload.ver > NET.ver) call('tick'); }).on('broadcast', { event: 'say' }, ({ payload }) => { if (payload && window.sayShow) sayShow(payload.s, payload.t); }).on('broadcast', { event: 'jk' }, ({ payload }) => { if (window.jkRemote) jkRemote(payload); }).on('broadcast', { event: 'jkreq' }, () => { if (window.jkBcast) jkBcast(); }).subscribe(st => { if (st === 'SUBSCRIBED') setTimeout(() => window.jkAsk && jkAsk(), 600); });
+    NET.chCode = code; NET.ch = CLOUD.sb.channel('mj-room-' + code).on('broadcast', { event: 'v' }, ({ payload }) => { if (payload && payload.ver > NET.ver) call('tick'); }).on('broadcast', { event: 'say' }, ({ payload }) => { if (payload && window.sayShow) (sayShow(payload.s, payload.t), payload.i != null && window.vpPlay && vpPlay(payload.s, 'line' + (payload.i + 1), { noBubble: true })); }).on('broadcast', { event: 'jk' }, ({ payload }) => { if (window.jkRemote) jkRemote(payload); }).on('broadcast', { event: 'jkreq' }, () => { if (window.jkBcast) jkBcast(); }).subscribe(st => { if (st === 'SUBSCRIBED') setTimeout(() => window.jkAsk && jkAsk(), 600); });
   }
   NET.create = async () => {
     if (!need() || !G) return; if (NET.role) return toast(`방 코드 ${NET.code}`);
