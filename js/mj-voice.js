@@ -68,13 +68,20 @@ function vpDelete(id) { const P = vpGet(id); if (!P) return; const ps = Object.v
 
 /* ── 화면 (프로필 → 보이스팩 탭) ── */
 function vpCount(P) { let n = 0; VP_KEYS.forEach(k => { if (((P.audio || {})[k] || []).length) n++; }); return n; }
+function vpListenHTML(id) { const P = vpGet(id); if (!P) return '';
+  return `<div class="vpls"><div class="k" style="margin:10px 0 4px">${esc(P.n || '')} · 상황별 듣기</div>${VP_SIT.map(([g, l]) => `<div class="vplg"><b>${g.split(' · ')[0]}</b>${l.map(([k, n]) => { const au = (P.audio || {})[k] || []; return `<button class="vplb ${au.length ? '' : 'off'}" ${au.length ? `data-vplisten="${id}:${k}"` : 'disabled'}>${au.length ? '▶' : '–'} ${n.replace(/ \(.*\)/, '')}${au.length > 1 ? ` <em>${au.length}</em>` : ''}</button>`; }).join('')}</div>`).join('')}</div>`; }
+/* 파일 이름으로 상황 맞추기: ron.mp3 · 론_2.mp3 · 03_riichi.wav 등 */
+const VP_ALIAS = Object.assign({}, ...VP_SIT.flatMap(([, l]) => l.map(([k, n]) => ({ [k]: k, [n.replace(/ \(.*\)/, '').replace(/\s/g, '')]: k })) ), { '대사1': 'line1', '대사2': 'line2', '대사3': 'line3', '대사4': 'line4', '북': 'kita', '역전': 'comeback', '연장': 'renchan', '임박': 'hurry' });
+function vpMatch(name) { const b = name.replace(/\.[^.]+$/, '').toLowerCase().replace(/\s/g, ''); const keys = Object.keys(VP_ALIAS).sort((a, c) => c.length - a.length); for (const a of keys) if (b.includes(a.toLowerCase())) return VP_ALIAS[a]; return null; }
 function voicePackHTML() {
   const packs = Object.entries(vpAll()), mine = PF.d.voice || '', adm = isAdmin(), sel = VPS.sel && vpGet(VPS.sel) ? VPS.sel : null;
+  if (VPS.sel == null && mine && vpGet(mine)) VPS.sel = adm ? mine : null;
   const card = (id, n, sub) => `<button class="vpc ${mine === id ? 'on' : ''}" data-vpick="${id}"><b>${esc(n)}</b><span>${sub}</span>${mine === id ? '<em>사용 중</em>' : ''}</button>`;
   let h = `<div class="md pf"><div class="k">내 프로필</div>${pfTabs('voice')}
     <p style="font-size:13.5px;margin:0 0 10px">고른 보이스팩으로 퐁 · 치 · 리치 · 론 · 쯔모와 화료 결과, 대사 1~4의 음성과 말풍선이 모두 바뀝니다. 온라인 방에서는 다른 사람에게도 내 팩으로 들립니다. 비어 있는 상황은 기본 음성으로 나옵니다.</p>
     <div class="vpl">${card('', '기본', '브라우저 TTS 음성')}${packs.map(([id, P]) => card(id, P.n || '이름 없음', `${vpCount(P)} / ${VP_KEYS.length} 상황 녹음`)).join('')}</div>
-    <div class="vpbar"><button class="pb" data-vptest>미리 듣기</button><label>음량 <input type="range" min="0" max="1" step="0.05" value="${VPS.vol}" data-vpvol></label>${adm ? `<span style="flex:1"></span><button class="pb" data-vpnew>새 팩 만들기</button>` : ''}</div>`;
+    ${vpListenHTML(mine)}
+    <div class="vpbar"><button class="pb" data-vptest>미리 듣기</button><label>음량 <input type="range" min="0" max="1" step="0.05" value="${VPS.vol}" data-vpvol></label>${adm ? `<span style="flex:1"></span><button class="pb" data-vpnew>새 팩 만들기</button>` : ''}${adm && sel ? `<label class="pb" style="position:relative;overflow:hidden">파일 한꺼번에 올리기<input type="file" accept="audio/*" multiple data-vpbulk style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>` : ''}</div>`;
   if (adm && packs.length) {
     h += `<div class="vpadm"><div class="vph"><b>관리자 · 팩 편집</b><select data-vpsel><option value="">편집할 팩 선택</option>${packs.map(([id, P]) => `<option value="${id}" ${sel === id ? 'selected' : ''}>${esc(P.n || id)}</option>`).join('')}</select></div>`;
     if (sel) { const P = vpGet(sel);
@@ -89,6 +96,7 @@ function voicePackHTML() {
 document.addEventListener('click', e => {
   const q = s => e.target.closest && e.target.closest(s); let el;
   if ((el = q('[data-vpick]'))) { PF.d.voice = el.dataset.vpick; PF.save(); return pfRefresh(); }
+  if ((el = q('[data-vplisten]'))) { const [id, k] = el.dataset.vplisten.split(':'), P = vpGet(id); try { const a = vpAudio(pick(P.audio[k])); a.volume = VPS.vol; a.currentTime = 0; a.play(); } catch (err) {} return; }
   if (q('[data-vptest]')) { const P = vpGet(PF.d.voice); if (!P) return voSay('론', 0); const k = ['ron', 'tsumo', 'riichi', 'win'].find(x => ((P.audio || {})[x] || []).length) || VP_KEYS.find(x => ((P.audio || {})[x] || []).length); if (!k) return toast('이 팩에는 아직 음성이 없습니다');
     try { const a = vpAudio(pick(P.audio[k])); a.volume = VPS.vol; a.currentTime = 0; a.play(); } catch (err) {} return; }
   if ((el = q('[data-vpplay]'))) { const [k, i] = el.dataset.vpplay.split(':'), P = vpGet(VPS.sel); try { const a = vpAudio(P.audio[k][+i]); a.volume = VPS.vol; a.currentTime = 0; a.play(); } catch (err) {} return; }
@@ -100,6 +108,8 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', async e => { const t = e.target;
   if (t.dataset.vpsel != null) { VPS.sel = t.value || null; return pfRefresh(); }
+  if (t.dataset.vpbulk != null && isAdmin() && VPS.sel) { const fs = [...t.files], miss = []; let ok = 0; toast('올리는 중…'); for (const f of fs) { const k = vpMatch(f.name); if (!k) { miss.push(f.name); continue; } if (await vpUpload(VPS.sel, k, f)) ok++; }
+    toast(`${ok}개 올림${miss.length ? ` · 상황을 못 찾은 파일 ${miss.length}개` : ''}`); if (miss.length) alert('상황을 찾지 못한 파일:\n' + miss.join('\n') + '\n\n파일 이름에 상황 이름(예: 론, 리치, 만관, 대사1) 또는 영문 키(ron, riichi, mangan, line1)를 넣어 주세요.'); return pfRefresh(); }
   if (t.dataset.vpup && isAdmin()) { const fs = [...t.files]; if (!fs.length) return; toast('올리는 중…'); for (const f of fs) await vpUpload(VPS.sel, t.dataset.vpup, f); pfRefresh(); }
 });
 document.addEventListener('input', e => { const t = e.target;

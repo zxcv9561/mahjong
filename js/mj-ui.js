@@ -24,7 +24,7 @@ function fit() { const vv = window.visualViewport, w = vv ? vv.width : innerWidt
   window.STW = W; window.STH = H;
   const st = $('stage'); st.style.width = W + 'px'; st.style.height = H + 'px';
   st.style.setProperty('--ex', (W - 1280) + 'px'); st.style.setProperty('--ey', (H - 720) + 'px'); st.style.setProperty('--hz', hz.toFixed(3)); st.style.setProperty('--az', az.toFixed(3)); st.style.setProperty('--ab', Math.round(102 * hz + 10) + 'px');
-  st.style.left = cx + 'px'; st.style.top = cy + 'px'; st.style.transform = `translate(-50%,-50%) scale(${s})`; }
+  st.style.left = (cx + (vv ? vv.offsetLeft : 0)) + 'px'; st.style.top = (cy + (vv ? vv.offsetTop : 0)) + 'px'; document.body.classList.toggle('mob', mob); st.style.transform = `translate(-50%,-50%) scale(${s})`; }
 function uiSizeHTML() { return `<div class="tg"><div><b>화면 크기</b><p>손패와 버튼 크기. 화면 비율에 여유가 있을 때 더 커집니다 · 이 기기에만 저장</p></div><div class="seg" style="width:auto">${[[0.9, '작게'], [1, '보통'], [1.15, '크게'], [1.3, '아주 크게']].map(([v, n]) => `<button class="${UISZ.v === v ? 'on' : ''}" data-uisz="${v}">${n}</button>`).join('')}</div></div>`; }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-uisz]'); if (!b) return; UISZ.v = +b.dataset.uisz; localStorage.setItem('mj-uisz', UISZ.v); fit(); if (typeof renderModal === 'function') renderModal(); });
 function toast(m) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; $('stage').appendChild(d); setTimeout(() => d.remove(), 1800); }
@@ -448,3 +448,6 @@ function yakuBookHTML() {
 document.addEventListener('change', e => { const el = e.target; if (!el.hasAttribute || !el.hasAttribute('data-seat')) return; UI.cfg.seats[+el.dataset.seat] = el.value; try { localStorage.setItem('mj-cfg', JSON.stringify(UI.cfg)); } catch (e) {} renderSetup(); if (UI.modal === 'room') renderModal(); });
 
 (() => { try { const s = JSON.parse(localStorage.getItem('mj-cfg') || 'null'); if (s && Array.isArray(s.seats)) { Object.assign(UI.cfg, s); if (!G && !$('setup').hidden) renderSetup(); } } catch (e) {} })();
+
+/* 첫 화면(설정)은 확대/축소하지 않고 기기 화면에 맞춰 흐르는 배치 · 모달은 무대 위에 그대로 */
+(() => { const sync = () => { const s = $('setup'); document.body.classList.toggle('insetup', !!s && !s.hidden); }; const mo = new MutationObserver(sync); const go = () => { const s = $('setup'); if (!s) return setTimeout(go, 50); if (s.parentNode !== document.body) document.body.appendChild(s); mo.observe(s, { attributes: true, attributeFilter: ['hidden'] }); sync(); }; go(); })();

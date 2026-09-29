@@ -239,3 +239,10 @@ body.need-rot #portrait,body.need-open #portrait{display:flex}body.need-open #po
 .vpr em{font-style:normal;font-weight:800;font-size:13px}.vpr .pfin{height:32px;font-size:13px;width:100%}
 .vpf{display:flex;gap:4px;align-items:center;flex-wrap:wrap}.vpf .pb{position:relative;overflow:hidden}.vpf input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
 .vpa{display:inline-flex;border:1px solid var(--ink)}.vpa button{border:0;background:#fff;font:inherit;font-size:12px;padding:3px 6px;cursor:pointer}.vpa button+button{border-left:1px solid var(--edge);color:var(--red)}
+html,body{overflow:hidden;height:100%;overscroll-behavior:none}
+body.insetup #setup{position:fixed;inset:0;z-index:5;padding:max(16px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));gap:clamp(14px,3vw,34px);grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-content:start;-webkit-overflow-scrolling:touch}
+body.insetup #stage{visibility:hidden;z-index:10;pointer-events:none}body.insetup #stage>*:not(#table):not(#panel):not(#setup){visibility:visible;pointer-events:auto}body.insetup #stage>.ov[hidden]{visibility:hidden}
+@media (max-width:760px){body.insetup #setup{grid-template-columns:minmax(0,1fr)}}
+body.insetup.mob #setup .go{min-height:44px}body.insetup.mob #setup select,body.insetup.mob #setup input{min-height:40px;font-size:15px}body.insetup.mob #setup .pb{min-height:36px}
+.vpls{border:1px solid var(--edge);background:#fff;padding:4px 10px 10px;margin-top:10px}.vplg{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px}.vplg>b{font-size:11.5px;color:var(--mut);width:64px}
+.vplb{border:1px solid var(--ink);background:var(--paper);font:inherit;font-size:12.5px;padding:4px 8px;cursor:pointer}.vplb em{font-style:normal;font-size:10px;background:var(--ink);color:var(--paper);padding:0 4px;margin-left:2px}.vplb.off{opacity:.35;cursor:default;border-style:dashed}
